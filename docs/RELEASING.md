@@ -10,7 +10,7 @@ Sparkle uses an Ed25519 key to authenticate the feed and ZIP. This is separate f
 
 1. Increase `CFBundleVersion` monotonically and set `CFBundleShortVersionString` in `scripts/build-prototype.sh`.
 2. Run the build and relevant tests from [DEVELOPMENT.md](DEVELOPMENT.md).
-3. Run `sh scripts/prepare-update.sh build/SideTray-next.app`.
+3. Run `sh scripts/prepare-update.sh build/staging/SideTray.app`.
 4. Review the resulting ZIP and signed feed in `build/releases/vVERSION/`.
 
 Both packaging scripts reject an app whose bundled GPL or Sparkle license is missing or differs from the repository. Builds copy `LICENSE` to `SideTray.app/Contents/Resources/LICENSE.txt` before code signing; beta ZIPs also include a top-level copy.

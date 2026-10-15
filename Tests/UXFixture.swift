@@ -24,7 +24,7 @@ final class UXFixture:NSObject {
   }
   stack.frame=NSRect(x:10,y:10,width:220,height:200); controls.contentView=stack
  }
- @objc func setup() { owner.showSettings(destination:"permissions") }
+ @objc func setup() { owner.setupPending=true; owner.permissionRecovery=PermissionRecovery(); owner.fixtureInstalled=true; owner.fixtureControlAccess=false; owner.controlRequestSent=false; owner.menuDataAccess = .permissionRequired; owner.showSettings(destination:"permissions") }
  @objc func accessRecovery() {
   owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=false
   owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
@@ -65,6 +65,23 @@ final class UXFixture:NSObject {
     return field.stringValue
    }.joined(separator:"\n")
   }
+  owner.fixtureInstalled=true; owner.fixtureControlAccess=false
+  owner.setupPending=true; owner.menuDataAccess = .permissionRequired
+  owner.refreshSettingsUI()
+  try check(visibleText().contains("Set Up SideTray") && !visibleText().contains("again"),"First setup must never imply previous approval")
+  var requests=0; var openedPanes:[String]=[]
+  owner.fixtureRequestControl={ requests += 1 }
+  owner.fixtureOpenSettings={ openedPanes.append($0) }
+  owner.openPermissions()
+  try check(requests == 1 && openedPanes.isEmpty,"First click requests natively without racing Settings")
+  owner.openPermissions()
+  try check(requests == 1 && openedPanes == ["Privacy_Accessibility"],"Second click provides Settings fallback without another alert")
+  owner.fixtureControlAccess=true; owner.controlRequestSent=false
+  owner.openPermissions()
+  try check(requests == 1,"Working grants must not request again")
+  owner.openMenuDataPermissions()
+  try check(openedPanes.last == "Privacy_AllFiles")
+  owner.fixtureRequestControl=nil; owner.fixtureOpenSettings=nil; owner.controlRequestSent=false
   // Production controller/presentation with injected access and resume results.
   // No permission requests, preferences writes, helpers or native icon changes.
   owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=true
@@ -120,7 +137,7 @@ final class UXFixture:NSObject {
   owner.refreshSettingsUI()
   try check(visibleText().contains("Remove SideTray from the affected list"))
   owner.setupPending=true; owner.refreshSettingsUI()
-  try check(visibleText().contains("If it is missing, use +"))
+  try check(visibleText().contains("If it is missing from Full Disk Access, use +"))
   owner.setupPending=false; owner.menuDataAccess = .unsupported; owner.refreshSettingsUI()
   try check(visibleText().contains("macOS not supported"))
   owner.recoveryBlocked=true; owner.refreshSettingsUI()
@@ -156,6 +173,7 @@ final class UXFixture:NSObject {
   empty()
   try check(owner.panel.keyboardItems.count == 1 && owner.panel.keyboardItems[0].title == "Manage Apps…")
   owner.panel.orderOut(nil)
+  print("PASS: native request first, Settings fallback, working grants retained, and first-run copy")
   print("PASS: actual shortcut collision and recovery, Off clears error, explicit pane routing, stable Settings hierarchy")
   print("PASS: production empty/overflow views, no scrollbar, unobscured targets, forward paging and keyboard End")
   print("PASS: permission failures distinct from settings errors, helper failure distinct from grants, first-run and update recovery guidance, bundled Settings icon")

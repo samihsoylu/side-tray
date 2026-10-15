@@ -6,11 +6,13 @@ Current beta builds are ad-hoc signed. Replacing the app can change the identity
 
 SideTray automatically opens **Restore access to SideTray** when it detects missing access after an update.
 
-1. Use **Open System Settings…** beside each missing permission and enable SideTray.
+1. Click **Request Access…** for Device Control and follow the macOS prompt. If no prompt appears, the button changes to **Open System Settings…** as a fallback. For Full Disk Access, open its settings page and enable SideTray.
 2. If SideTray already looks enabled, remove only SideTray from the affected list with **−**, then use **+** to add `/Applications/SideTray.app` again.
 3. Approve any macOS authentication locally. Choose **Quit & Reopen** if macOS asks.
 
 SideTray checks automatically and resumes your saved layout when access is ready. **Check Again** retries a failed recovery. If the screen says menu bar settings are unavailable, follow its status message; that does not necessarily mean a permission is missing.
+
+Use **Show App in Finder** to locate the running app when adding it. First-time setup says **Set Up SideTray** and does not describe a previous grant.
 
 Your app choices are retained. Apple signing and notarization are planned separately; the update-download signature does not replace them.
 

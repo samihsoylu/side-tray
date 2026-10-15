@@ -1,5 +1,15 @@
 # Beta status
 
+## 0.2.4 (build 9)
+
+Device Control now starts with a native **Request Access…** action. A later click opens Settings if macOS suppresses the prompt; the app does not open a competing window while the request is pending. Full Disk Access retains its required System Settings approval, with **Show App in Finder** to locate the correct bundle. First-time setup says **Set Up SideTray**, without reapproval language.
+
+Live approval evidence: the separate permission-test app was registered through the native request, its Device Control grant was approved with Touch ID and detected automatically, and Full Disk Access was detected after macOS Quit & Reopen. Both temporary grants were removed afterward. This used production permission actions and Settings with real OS grants; native layout resumption remains covered separately by controller tests. Production updating is left to the user.
+
+Staging now uses `build/staging/SideTray.app` and an explicit SideTray display name. Ordinary UI tests no longer query real Accessibility or request permissions, preventing test entries from appearing during routine UI checks. The old disabled UX-test entry was removed locally, and rerunning the preview did not recreate it. The former staging bundle shared the production identifier, making the “SideTray-next” label ambiguous; the current production permission entry was observed as SideTray.
+
+Nine pure suites and the controller/Settings tests passed, including first-run wording, one native request, Settings fallback and preserving working grants. The universal release archive passed feed/archive signature, exact license and extracted code-signature checks. Developer ID signing and notarization remain deferred; renewed approval may still be needed after updates.
+
 ## 0.2.3 (build 8)
 
 After an update, missing Device Control or Full Disk Access automatically opens **Restore access to SideTray**. Only missing permissions offer approval actions. SideTray checks quietly and resumes saved choices after permissions and menu-bar recovery are ready. Working grants are retained; macOS approval remains the user's action.

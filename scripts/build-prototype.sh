@@ -5,7 +5,7 @@ sh scripts/fetch-sparkle.sh
 task_framework=build/dependencies/Sparkle-2.10.0
 task_bundle=build/SideTray.app
 if [ "${SIDETRAY_STAGE_ONLY:-0}" = 1 ]; then
- task_bundle=build/SideTray-next.app
+ task_bundle=build/staging/SideTray.app
 elif pgrep -x SideTray >/dev/null; then
  echo "Quit SideTray before rebuilding so the running app and its permission signature stay intact." >&2
  exit 1
@@ -26,16 +26,17 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>io.sidetray.prototype</string>
 <key>CFBundleName</key><string>SideTray</string>
+<key>CFBundleDisplayName</key><string>SideTray</string>
 <key>CFBundleIconFile</key><string>SideTray</string>
 <key>SideTrayAuthor</key><string>Samih Soylu</string>
 <key>SideTrayAuthorEmail</key><string>mail@samihsoylu.nl</string>
 <key>CFBundleExecutable</key><string>SideTray</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>8</string>
+<key>CFBundleVersion</key><string>9</string>
 <key>SideTrayReleaseChannel</key><string>Beta</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
-<key>CFBundleShortVersionString</key><string>0.2.3</string>
+<key>CFBundleShortVersionString</key><string>0.2.4</string>
 <key>SUFeedURL</key><string>https://raw.githubusercontent.com/samihsoylu/side-tray/main/appcast.xml</string>
 <key>SUPublicEDKey</key><string>r7UuuKkGu2L7nTKNXnACxbidTszFTK5hkGmAygh0tS0=</string>
 <key>SUEnableAutomaticChecks</key><false/>

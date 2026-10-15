@@ -9,7 +9,7 @@ sh scripts/build-ux-fixture.sh
 build/SideTrayUXFixture.app/Contents/MacOS/SideTrayUXFixture --self-test
 ```
 
-The staging build produces `build/SideTray-next.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Both the GPL license (`LICENSE.txt`) and Sparkle license are included in the app’s `Contents/Resources` before signing. Normal builds use ad-hoc code signing. Developer ID signing and notarization are deferred.
+The staging build produces `build/staging/SideTray.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Both the GPL license (`LICENSE.txt`) and Sparkle license are included in the app’s `Contents/Resources` before signing. Normal builds use ad-hoc code signing. Developer ID signing and notarization are deferred.
 
 The SDK target is explicit. An implicit deployment target on a newer toolchain can produce a binary that runs directly but cannot relaunch through Launch Services on the test Mac.
 
@@ -17,7 +17,7 @@ The app supports macOS 27 and fails closed for unsupported menu-setting formats 
 
 ## Access recovery tests
 
-The pure suite checks permission recovery transitions. The UX fixture exercises the production controller and Settings with test-only permission, helper and resume results. It verifies automatic presentation, partial grants, failure handling and saved choices without granting OS access or modifying the real menu bar. Launch the fixture and choose **Show Access Recovery** for a visual preview. Actual macOS approval after an update remains a manual check.
+The pure suite checks permission recovery transitions. The UX fixture exercises the production controller and Settings with test-only permission, helper and resume results. It verifies automatic presentation, partial grants, failure handling and saved choices without granting OS access or modifying the real menu bar. Launch the fixture and choose **Show Access Recovery** for a visual preview. The ordinary UX fixture never probes real Accessibility or opens permission requests. To explicitly test native approval, build `SIDETRAY_PERMISSION_JOURNEY=1 sh scripts/build-ux-fixture.sh` and launch `build/SideTray Permission Test.app`. This separate identity uses production request actions, Settings and a read-only menu-preference access check. It never runs menu management, the updater or login registration. Approve temporary access only with the Mac owner’s consent; verify both checks after macOS Quit & Reopen, quit the test app, then remove its two grants in System Settings. The fixture does not prove production identity continuity across an ad-hoc update.
 
 ## Isolated update tests
 

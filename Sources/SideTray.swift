@@ -92,6 +92,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  let placement=PlacementStore()
  var setupPending=SetupProgress.needsSetup()
  var permissionRecovery=PermissionRecovery()
+ var controlRequestSent=false
  var settingsUI:SettingsUI?
  var checkingPermissions=false
  var permissionCheckRequested=false
@@ -131,6 +132,9 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  #if SIDETRAY_UX_FIXTURE
  // Test snapshots never grant OS access or run native visibility operations.
+ var fixtureRequestControl:(()->Void)?
+ var fixtureOpenSettings:((String)->Void)?
+ var fixtureCheckPermissions:(()->Void)?
  var fixtureControlAccess:Bool?
  var fixtureInstalled:Bool?
  var fixtureHelperRunning:Bool?
@@ -140,7 +144,11 @@ final class Controller: NSObject, NSApplicationDelegate {
   #if SIDETRAY_UX_FIXTURE
   if let value=fixtureControlAccess { return value }
   #endif
+  #if SIDETRAY_UX_FIXTURE && !SIDETRAY_PERMISSION_JOURNEY
+  return false
+  #else
   return AXIsProcessTrusted()
+  #endif
  }
  var isInstalled:Bool {
   #if SIDETRAY_UX_FIXTURE
@@ -374,6 +382,10 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  func availableEntries() -> [Entry] {
+  #if SIDETRAY_UX_FIXTURE
+  return [] // Presentation tests must never query other apps through Accessibility.
+  #else
+  guard controlAccessGranted else { return [] }
   var found=entries()
   for bundle in hiddenBundles {
    guard let app=NSRunningApplication.runningApplications(withBundleIdentifier:bundle).first,
@@ -397,6 +409,7 @@ final class Controller: NSObject, NSApplicationDelegate {
    guard !bundle.hasPrefix("com.apple."),bundle != Bundle.main.bundleIdentifier else { return false }
    return seen.insert(bundle).inserted
   }.sorted { ($0.app.localizedName ?? "") < ($1.app.localizedName ?? "") }
+  #endif
  }
  func allowedBundles(reveal:String?=nil) -> [String] {
   var allowed=placement.visible
@@ -538,7 +551,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  @objc func openMenuDataPermissions() {
-  if let url=URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
+  openPrivacySettings("Privacy_AllFiles")
  }
  // Returns true while access recovery owns resuming the saved layout.
  @discardableResult func updatePermissionRecovery() -> Bool {
@@ -629,7 +642,13 @@ final class Controller: NSObject, NSApplicationDelegate {
    }
   }
  }
- @objc func recheckPermissions() { permissionRecovery.retry(); permissionCheckRequested=true; checkMenuDataAccess(); refreshSettingsUI() }
+ @objc func recheckPermissions() {
+  #if SIDETRAY_UX_FIXTURE
+  fixtureCheckPermissions?(); return
+  #else
+  permissionRecovery.retry(); permissionCheckRequested=true; checkMenuDataAccess(); refreshSettingsUI()
+  #endif
+ }
  @objc func finishSetup() {
   guard accessReady else { showSettings(destination:"permissions"); return }
   setupPending=false; UserDefaults.standard.set(true,forKey:"setupComplete")
@@ -812,9 +831,36 @@ final class Controller: NSObject, NSApplicationDelegate {
  @objc func openStrip() { toggle() }
  @objc func refreshSettings() { refreshSettingsUI() }
  @objc func openPermissions() {
-  // Navigate directly. Prompting as well opens a second, asynchronous OS alert.
-  if let url=URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
+  guard isInstalled else { showSettings(destination:"permissions"); return }
+  if controlAccessGranted || controlRequestSent { openPrivacySettings("Privacy_Accessibility"); return }
+  controlRequestSent=true
+  // Ask the OS once after an explicit click. Do not race its asynchronous alert
+  // by opening Settings too. A later click provides the Settings fallback.
+  #if SIDETRAY_UX_FIXTURE
+  if let request=fixtureRequestControl { request() }
+  else {
+   #if SIDETRAY_PERMISSION_JOURNEY
+   requestNativeControlAccess()
+   #endif
+  }
+  #else
+  requestNativeControlAccess()
+  #endif
+  refreshSettingsUI()
  }
+ private func requestNativeControlAccess() {
+  let options=[kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String:true] as CFDictionary
+  _ = AXIsProcessTrustedWithOptions(options)
+ }
+ private func openPrivacySettings(_ pane:String) {
+  #if SIDETRAY_UX_FIXTURE
+  if let open=fixtureOpenSettings { open(pane); return }
+  #endif
+  #if !SIDETRAY_UX_FIXTURE || SIDETRAY_PERMISSION_JOURNEY
+  if let url=URL(string:"x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?"+pane) { NSWorkspace.shared.open(url) }
+  #endif
+ }
+ @objc func showPermissionApp() { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
  @objc func changeLogin(_ sender:NSButton) {
   do {
    if sender.state == .on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }

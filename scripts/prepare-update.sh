@@ -2,7 +2,7 @@
 # Prepares a GitHub release archive and signed feed locally; never uploads.
 set -eu
 cd "$(dirname "$0")/.."
-release_bundle=${1:-build/SideTray-next.app}
+release_bundle=${1:-build/staging/SideTray.app}
 sh scripts/check-bundle-licenses.sh "$release_bundle"
 sh scripts/fetch-sparkle.sh
 codesign --verify --deep --strict "$release_bundle"
