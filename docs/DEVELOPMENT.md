@@ -9,7 +9,7 @@ sh scripts/build-ux-fixture.sh
 build/SideTrayUXFixture.app/Contents/MacOS/SideTrayUXFixture --self-test
 ```
 
-The staging build produces `build/SideTray-next.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Normal builds use ad-hoc code signing. Developer ID signing and notarization are deferred.
+The staging build produces `build/SideTray-next.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Both the GPL license (`LICENSE.txt`) and Sparkle license are included in the app’s `Contents/Resources` before signing. Normal builds use ad-hoc code signing. Developer ID signing and notarization are deferred.
 
 The SDK target is explicit. An implicit deployment target on a newer toolchain can produce a binary that runs directly but cannot relaunch through Launch Services on the test Mac.
 

@@ -13,7 +13,9 @@ Sparkle uses an Ed25519 key to authenticate the feed and ZIP. This is separate f
 3. Run `sh scripts/prepare-update.sh build/SideTray-next.app`.
 4. Review the resulting ZIP and signed feed in `build/releases/vVERSION/`.
 
-The script checks bundle identity, architectures and updater security settings, archives the app as `SideTray.app`, signs the archive and feed, limits the feed to macOS 27, and verifies the feed. It performs no upload. Do not edit a signed feed without signing it again.
+Both packaging scripts reject an app whose bundled GPL or Sparkle license is missing or differs from the repository. Builds copy `LICENSE` to `SideTray.app/Contents/Resources/LICENSE.txt` before code signing; beta ZIPs also include a top-level copy.
+
+The update script checks bundle identity, architectures and updater security settings, archives the app as `SideTray.app`, signs the archive and feed, limits the feed to macOS 27, and verifies the feed. It performs no upload. Do not edit a signed feed without signing it again.
 
 ## Publish in this order
 

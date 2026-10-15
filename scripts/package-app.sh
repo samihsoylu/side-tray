@@ -2,7 +2,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 package_source=${1:-/Applications/SideTray.app}
-package_output=build/SideTray-beta.zip
+package_output=${2:-build/SideTray-beta.zip}
+sh scripts/check-bundle-licenses.sh "$package_source"
 test -d "$package_source/Contents/MacOS"
 codesign --verify --strict "$package_source"
 mkdir -p build
@@ -10,6 +11,7 @@ package_stage=$(mktemp -d build/package.XXXXXX)
 trap 'rm -rf "$package_stage"' EXIT
 mkdir "$package_stage/SideTray-beta"
 ditto "$package_source" "$package_stage/SideTray-beta/SideTray.app"
+cp LICENSE "$package_stage/SideTray-beta/LICENSE.txt"
 cp SECOND-MAC-TEST.md "$package_stage/SideTray-beta/Second Mac Test.md"
 cat > "$package_stage/SideTray-beta/Read Me.txt" <<'README'
 SideTray — beta
@@ -65,11 +67,13 @@ Validation limits
 This bundle contains arm64 and x86_64 binaries, but live validation was on the
 current Apple Silicon Mac. This does not establish compatibility with another
 Mac or an Intel system. Remaining interaction and lifecycle tests are tracked
-in the source repository's SESSION-SPEC.md. Do not treat this archive as proof
+in the source repository's docs/STATUS.md. Do not treat this archive as proof
 that those tests have passed.
 
-An open-source release is planned. This package does not publish the project
-or select its final source-code license.
+SideTray is licensed under the GNU General Public License v3.0. See LICENSE.txt
+in this archive or SideTray.app/Contents/Resources/LICENSE.txt.
+Source: https://github.com/samihsoylu/side-tray
+Sparkle retains its own license in the app bundle.
 README
 package_binary="$package_stage/SideTray-beta/SideTray.app/Contents/MacOS/SideTray"
 {

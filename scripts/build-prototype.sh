@@ -11,6 +11,7 @@ elif pgrep -x SideTray >/dev/null; then
  exit 1
 fi
 mkdir -p "$task_bundle/Contents/MacOS" "$task_bundle/Contents/Resources" build/architectures
+cp LICENSE "$task_bundle/Contents/Resources/LICENSE.txt"
 cp Assets/SideTray.icns "$task_bundle/Contents/Resources/SideTray.icns"
 cp ThirdParty/Sparkle-LICENSE.txt "$task_bundle/Contents/Resources/Sparkle-LICENSE.txt"
 task_sdk="$(xcrun --sdk macosx --show-sdk-path)"

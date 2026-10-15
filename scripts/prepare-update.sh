@@ -2,8 +2,9 @@
 # Prepares a GitHub release archive and signed feed locally; never uploads.
 set -eu
 cd "$(dirname "$0")/.."
-sh scripts/fetch-sparkle.sh
 release_bundle=${1:-build/SideTray-next.app}
+sh scripts/check-bundle-licenses.sh "$release_bundle"
+sh scripts/fetch-sparkle.sh
 codesign --verify --deep --strict "$release_bundle"
 python3 - "$release_bundle" <<'PY'
 import pathlib,plistlib,sys,subprocess
