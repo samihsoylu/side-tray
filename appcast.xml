@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
 --><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
- <channel>
-  <title>SideTray Updates</title>
-  <link>https://github.com/samihsoylu/side-tray</link>
-  <description>SideTray beta releases. No updater-enabled release has been published yet.</description>
-  <language>en</language>
- </channel>
+    <channel>
+        <title>SideTray Updates</title>
+        <link>https://github.com/samihsoylu/side-tray</link>
+        <description>SideTray beta updates for macOS.</description>
+        <language>en</language>
+        <item>
+            <title>0.2.0</title>
+            <pubDate>Thu, 15 Oct 2026 20:40:21 +0200</pubDate>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.0/SideTray-0.2.0.zip" length="2809530" type="application/octet-stream" sparkle:edSignature="veGdNHf5f9yMz2YiOy3jcb2mkI8FwHvWRImcZiwgyltGOmpTaHDahlXoo4m/PIjAP2XeNUSBqwAEKU68paRvBw=="></enclosure>
+        <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion></item>
+    </channel>
 </rss><!-- sparkle-signatures:
-edSignature: +iju7XdfC78EaVNFZwow1LqxKwXcmwJtxwXeG1LJ5tNpO58Qy5hLMNZAVd0vzKylES7lhJGIXF9wtzeI1TSuBw==
-length: 627
+edSignature: Ft/Hgxs45Zh0N10GonL2IFyJ8DG+QlQzmViWmRyDabO5Wk5bSnCBwzG79k9EP0fyo9VICX+Ty0YfEKJoGCA5Ag==
+length: 1349
 -->
