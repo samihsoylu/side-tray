@@ -15,6 +15,10 @@ The SDK target is explicit. An implicit deployment target on a newer toolchain c
 
 The app supports macOS 27 and fails closed for unsupported menu-setting formats or future major OS versions. Native preference imports have no atomic compare-and-swap here: the final comparison reduces conflicts but cannot eliminate a race with another writer. Avoid concurrent menu bar managers.
 
+## Access recovery tests
+
+The pure suite checks permission recovery transitions. The UX fixture exercises the production controller and Settings with test-only permission, helper and resume results. It verifies automatic presentation, partial grants, failure handling and saved choices without granting OS access or modifying the real menu bar. Launch the fixture and choose **Show Access Recovery** for a visual preview. Actual macOS approval after an update remains a manual check.
+
 ## Isolated update tests
 
 ```sh

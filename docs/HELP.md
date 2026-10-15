@@ -4,11 +4,13 @@
 
 Current beta builds are ad-hoc signed. Replacing the app can change the identity macOS associates with a previous permission grant, even when its switch still looks enabled.
 
-1. Quit SideTray normally.
-2. Open **System Settings → Privacy & Security** and the affected permission page.
-3. Remove only SideTray from that list, then use **+** to add `/Applications/SideTray.app` again.
-4. Approve any macOS authentication locally and reopen SideTray.
-5. Check **Settings → Permissions**. It should say **SideTray is ready**.
+SideTray automatically opens **Restore access to SideTray** when it detects missing access after an update.
+
+1. Use **Open System Settings…** beside each missing permission and enable SideTray.
+2. If SideTray already looks enabled, remove only SideTray from the affected list with **−**, then use **+** to add `/Applications/SideTray.app` again.
+3. Approve any macOS authentication locally. Choose **Quit & Reopen** if macOS asks.
+
+SideTray checks automatically and resumes your saved layout when access is ready. **Check Again** retries a failed recovery. If the screen says menu bar settings are unavailable, follow its status message; that does not necessarily mean a permission is missing.
 
 Your app choices are retained. Apple signing and notarization are planned separately; the update-download signature does not replace them.
 

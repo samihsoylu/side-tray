@@ -25,3 +25,6 @@ build/tests/shortcut-choice
 
 xcrun swiftc -target arm64-apple-macos26.0 Sources/UpdatePolicy.swift Tests/UpdatePolicyTests.swift -o build/tests/update-policy
 build/tests/update-policy
+
+xcrun swiftc -target arm64-apple-macos26.0 Sources/PermissionRecovery.swift Tests/PermissionRecoveryTests.swift -o build/tests/permission-recovery
+build/tests/permission-recovery

@@ -19,12 +19,18 @@ final class UXFixture:NSObject {
   controls=NSWindow(contentRect:NSRect(x:100,y:200,width:240,height:220),styleMask:[.titled,.closable],backing:.buffered,defer:false)
   controls.title="SideTray UX Test"
   let stack=NSStackView(); stack.orientation = .vertical; stack.spacing=12
-  for (title,action) in [("Show Setup",#selector(setup)),("Show Failure",#selector(failure)),("Show Empty State",#selector(empty)),("Show Overflow",#selector(overflow)),("Quit Fixture",#selector(quit))] {
+  for (title,action) in [("Show Setup",#selector(setup)),("Show Access Recovery",#selector(accessRecovery)),("Show Failure",#selector(failure)),("Show Empty State",#selector(empty)),("Show Overflow",#selector(overflow)),("Quit Fixture",#selector(quit))] {
    stack.addArrangedSubview(NSButton(title:title,target:self,action:action))
   }
   stack.frame=NSRect(x:10,y:10,width:220,height:200); controls.contentView=stack
  }
  @objc func setup() { owner.showSettings(destination:"permissions") }
+ @objc func accessRecovery() {
+  owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=false
+  owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
+  owner.permissionRecovery=PermissionRecovery()
+  owner.updatePermissionRecovery()
+ }
  @objc func failure() { owner.showMenuFailure("test.example") }
  @objc func empty() {
   owner.current=[]; owner.renderTray(frame:NSRect(x:850,y:650,width:330,height:33))
@@ -59,6 +65,48 @@ final class UXFixture:NSObject {
     return field.stringValue
    }.joined(separator:"\n")
   }
+  // Production controller/presentation with injected access and resume results.
+  // No permission requests, preferences writes, helpers or native icon changes.
+  owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=true
+  owner.fixtureHelperRunning=true; owner.startupRecoveryComplete=true
+  owner.menuDataAccess = .permissionRequired; owner.menuDataReadable=false
+  let choices=owner.placement.visible
+  try check(owner.updatePermissionRecovery())
+  try check(owner.settingsTab == "permissions" && owner.settings!.isVisible)
+  try check(owner.settingsUI!.navigation.isHidden)
+  try check(visibleText().contains("Restore access to SideTray"))
+  let missingButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Open System Settings…" && !$0.isHiddenOrHasHiddenAncestor }
+  try check(missingButtons.count == 1,"Only the missing grant should offer an action")
+  owner.menuDataAccess = .unavailable; owner.refreshSettingsUI()
+  try check(visibleText().contains("Menu bar settings unavailable"))
+  try check(!views(owner.settings!.contentView!).contains { view in
+   guard let button=view as? NSButton else { return false }
+   return button.title == "Open System Settings…" && !button.isHiddenOrHasHiddenAncestor
+  },"Unknown access failures must not request new grants")
+  owner.menuDataAccess = .permissionRequired
+  owner.settings?.orderOut(nil)
+  owner.updatePermissionRecovery()
+  try check(owner.settings?.isVisible == false,"Polling must not steal focus again")
+  var resumeCount=0; var finishResume:((Bool)->Void)?
+  owner.fixtureResumeVisibility={ callback in resumeCount += 1; finishResume=callback }
+  owner.menuDataAccess = .available; owner.menuDataReadable=true
+  owner.updatePermissionRecovery(); owner.updatePermissionRecovery()
+  try check(resumeCount == 1 && owner.permissionRecovery.state == .resuming)
+  finishResume?(false)
+  try check(owner.permissionRecovery.state == .needsAttention && !owner.canManageVisibility)
+  owner.updatePermissionRecovery()
+  try check(resumeCount == 1,"Failed resume must not loop")
+  owner.permissionRecovery.retry(); owner.updatePermissionRecovery()
+  try check(resumeCount == 2)
+  finishResume?(true)
+  try check(owner.permissionRecovery.state == .complete)
+  try check(owner.placement.visible == choices,"Permission recovery must preserve choices")
+  owner.showSettings(destination:"permissions")
+  try check(visibleText().contains("Your saved app choices have been restored"))
+  try check(!owner.settingsUI!.navigation.isHidden)
+  owner.permissionRecovery=PermissionRecovery()
+  owner.fixtureInstalled=nil; owner.fixtureControlAccess=nil; owner.fixtureHelperRunning=nil; owner.fixtureResumeVisibility=nil
+  owner.startupRecoveryComplete=false; owner.menuDataReadable=false
   owner.setupPending=false; owner.menuDataAccess = .unavailable
   owner.refreshSettingsUI()
   try check(visibleText().contains("Settings unavailable"))
@@ -111,6 +159,7 @@ final class UXFixture:NSObject {
   print("PASS: actual shortcut collision and recovery, Off clears error, explicit pane routing, stable Settings hierarchy")
   print("PASS: production empty/overflow views, no scrollbar, unobscured targets, forward paging and keyboard End")
   print("PASS: permission failures distinct from settings errors, helper failure distinct from grants, first-run and update recovery guidance, bundled Settings icon")
+  print("PASS: automatic FDA-only recovery screen, missing-grant actions, no repeated focus, single resume and saved choices")
   print("PASS: startup/recovery write gates, unsupported-OS presentation and safe quit-warning default")
  }
 }

@@ -17,7 +17,7 @@ cp ThirdParty/Sparkle-LICENSE.txt "$task_bundle/Contents/Resources/Sparkle-LICEN
 task_sdk="$(xcrun --sdk macosx --show-sdk-path)"
 for task_arch in arm64 x86_64; do
  xcrun clang -fobjc-arc -isysroot "$task_sdk" -target "${task_arch}-apple-macos26.0" -c Sources/NativeVisibility.m -o "build/architectures/Visibility-${task_arch}.o"
- xcrun swiftc -F "$task_framework" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks -import-objc-header Sources/NativeVisibility.h -target "${task_arch}-apple-macos26.0" Sources/SideTray.swift Sources/TrayGeometry.swift Sources/PlacementStore.swift Sources/ShortcutChoice.swift Sources/Shortcut.swift Sources/MenuActivation.swift Sources/MenuSurfaceWatch.swift Sources/Settings.swift Sources/MenuBarLayout.swift Sources/AppIdentity.swift Sources/MenuSwitches.swift Sources/VisibilityPipeline.swift Sources/UpdatePolicy.swift Sources/Updates.swift "build/architectures/Visibility-${task_arch}.o" -o "build/architectures/SideTray-${task_arch}"
+ xcrun swiftc -F "$task_framework" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks -import-objc-header Sources/NativeVisibility.h -target "${task_arch}-apple-macos26.0" Sources/SideTray.swift Sources/TrayGeometry.swift Sources/PlacementStore.swift Sources/ShortcutChoice.swift Sources/PermissionRecovery.swift Sources/Shortcut.swift Sources/MenuActivation.swift Sources/MenuSurfaceWatch.swift Sources/Settings.swift Sources/MenuBarLayout.swift Sources/AppIdentity.swift Sources/MenuSwitches.swift Sources/VisibilityPipeline.swift Sources/UpdatePolicy.swift Sources/Updates.swift "build/architectures/Visibility-${task_arch}.o" -o "build/architectures/SideTray-${task_arch}"
 done
 xcrun lipo -create build/architectures/SideTray-arm64 build/architectures/SideTray-x86_64 -output "$task_bundle/Contents/MacOS/SideTray"
 cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
@@ -31,11 +31,11 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 <key>SideTrayAuthorEmail</key><string>mail@samihsoylu.nl</string>
 <key>CFBundleExecutable</key><string>SideTray</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>7</string>
+<key>CFBundleVersion</key><string>8</string>
 <key>SideTrayReleaseChannel</key><string>Beta</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
-<key>CFBundleShortVersionString</key><string>0.2.2</string>
+<key>CFBundleShortVersionString</key><string>0.2.3</string>
 <key>SUFeedURL</key><string>https://raw.githubusercontent.com/samihsoylu/side-tray/main/appcast.xml</string>
 <key>SUPublicEDKey</key><string>r7UuuKkGu2L7nTKNXnACxbidTszFTK5hkGmAygh0tS0=</string>
 <key>SUEnableAutomaticChecks</key><false/>

@@ -91,6 +91,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  let updates=Updates()
  let placement=PlacementStore()
  var setupPending=SetupProgress.needsSetup()
+ var permissionRecovery=PermissionRecovery()
  var settingsUI:SettingsUI?
  var checkingPermissions=false
  var permissionCheckRequested=false
@@ -128,9 +129,33 @@ final class Controller: NSObject, NSApplicationDelegate {
    .subtracting(placement.visible)
    .filter { !$0.hasPrefix("com.apple.") && $0 != Bundle.main.bundleIdentifier }
  }
- var isInstalled:Bool { Bundle.main.bundleURL.resolvingSymlinksInPath().path.hasPrefix("/Applications/") }
- var accessReady:Bool { AXIsProcessTrusted() && isInstalled && menuDataReadable && startupRecoveryComplete && !recoveryBlocked && recoveryWatcher?.isRunning == true }
- var canManageVisibility:Bool { accessReady && !setupPending }
+ #if SIDETRAY_UX_FIXTURE
+ // Test snapshots never grant OS access or run native visibility operations.
+ var fixtureControlAccess:Bool?
+ var fixtureInstalled:Bool?
+ var fixtureHelperRunning:Bool?
+ var fixtureResumeVisibility:((@escaping(Bool)->Void)->Void)?
+ #endif
+ var controlAccessGranted:Bool {
+  #if SIDETRAY_UX_FIXTURE
+  if let value=fixtureControlAccess { return value }
+  #endif
+  return AXIsProcessTrusted()
+ }
+ var isInstalled:Bool {
+  #if SIDETRAY_UX_FIXTURE
+  if let value=fixtureInstalled { return value }
+  #endif
+  return Bundle.main.bundleURL.resolvingSymlinksInPath().path.hasPrefix("/Applications/")
+ }
+ var recoveryHelperRunning:Bool {
+  #if SIDETRAY_UX_FIXTURE
+  if let value=fixtureHelperRunning { return value }
+  #endif
+  return recoveryWatcher?.isRunning == true
+ }
+ var accessReady:Bool { controlAccessGranted && isInstalled && menuDataReadable && startupRecoveryComplete && !recoveryBlocked && recoveryHelperRunning }
+ var canManageVisibility:Bool { accessReady && !setupPending && !permissionRecovery.isActive }
  func applicationDidFinishLaunching(_ notification: Notification) {
   if let url=Bundle.main.url(forResource:"SideTray",withExtension:"icns"),let icon=NSImage(contentsOf:url) {
    NSApp.applicationIconImage=icon
@@ -141,7 +166,7 @@ final class Controller: NSObject, NSApplicationDelegate {
    self.status?.button?.toolTip=self.updates.candidate == nil ? "SideTray — click to open, right-click for options" : "SideTray — update ready in Settings"
   }
   updates.start()
-  trusted=AXIsProcessTrusted()
+  trusted=controlAccessGranted
   if let issue=menuSwitches.recoveryIssue { visibilityMessage=issue }
   if !UserDefaults.standard.bool(forKey:"didRemoveExperimentalPosition") {
    UserDefaults.standard.removeObject(forKey:"NSStatusItem Preferred Position SideTray.StatusItem")
@@ -188,7 +213,8 @@ final class Controller: NSObject, NSApplicationDelegate {
   registerShortcut()
   installLifecycle()
   checkMenuDataAccess()
-  if setupPending || !trusted || !isInstalled { showSettings(destination:"permissions") }
+  if setupPending || !isInstalled { showSettings(destination:"permissions") }
+  else { updatePermissionRecovery() }
  }
  func installGlobalMonitor() {
   if let monitor { NSEvent.removeMonitor(monitor) }; monitor=nil
@@ -400,7 +426,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  private func applyVisibilityNow(reveal:String?,completion:@escaping(Bool)->Void) {
-  guard !setupPending else { completion(false); return }
+  guard !setupPending,permissionRecovery.state != .needsAttention else { completion(false); return }
   guard startupRecoveryComplete,!recoveryBlocked else {
    visibilityMessage="Recovery must finish before SideTray can hide icons. Open Permissions and use Check Permissions."
    completion(false); return
@@ -514,6 +540,38 @@ final class Controller: NSObject, NSApplicationDelegate {
  @objc func openMenuDataPermissions() {
   if let url=URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
  }
+ // Returns true while access recovery owns resuming the saved layout.
+ @discardableResult func updatePermissionRecovery() -> Bool {
+  let action=permissionRecovery.evaluate(setupPending:setupPending,installed:isInstalled,
+   controlGranted:controlAccessGranted,dataPermissionMissing:menuDataAccess == .permissionRequired,ready:accessReady)
+  switch action {
+  case .present:
+   showSettings(destination:"permissions")
+  case .resume:
+   placementBusy=true; refreshSettingsUI()
+   resumeAfterPermissions { ok in
+    self.placementBusy=false
+    self.permissionRecovery.finished(success:ok)
+    if ok {
+     self.visibilityMessage=""
+     #if SIDETRAY_UX_FIXTURE
+     if self.fixtureResumeVisibility == nil { self.arrangeControl() }
+     #else
+     self.arrangeControl()
+     #endif
+    }
+    self.refreshSettingsUI()
+   }
+  case .none: break
+  }
+  return action == .resume || permissionRecovery.isActive
+ }
+ private func resumeAfterPermissions(_ completion:@escaping(Bool)->Void) {
+  #if SIDETRAY_UX_FIXTURE
+  if let action=fixtureResumeVisibility { action(completion); return }
+  #endif
+  applyVisibility(completion:completion)
+ }
  @objc func checkMenuDataAccess() {
   guard !checkingPermissions,!terminating else { return }; checkingPermissions=true
   let recover = !startupRecoveryComplete || recoveryBlocked
@@ -538,6 +596,7 @@ final class Controller: NSObject, NSApplicationDelegate {
        : "Menu bar settings could not be read. Try Check Permissions again; changing permissions may not be necessary."
      }
      self.permissionCheckRequested=false
+     self.updatePermissionRecovery()
      self.refreshSettingsUI()
      return
     }
@@ -560,6 +619,7 @@ final class Controller: NSObject, NSApplicationDelegate {
     UserDefaults.standard.set(true,forKey:"useMenuSwitches")
     let requested=self.permissionCheckRequested; self.permissionCheckRequested=false
     if self.setupPending { self.visibilityMessage=""; self.refreshSettingsUI(); return }
+    if self.updatePermissionRecovery() { self.refreshSettingsUI(); return }
     if changed || requested {
      self.applyVisibility { ok in
       if ok { self.visibilityMessage=""; self.arrangeControl() }
@@ -569,7 +629,7 @@ final class Controller: NSObject, NSApplicationDelegate {
    }
   }
  }
- @objc func recheckPermissions() { permissionCheckRequested=true; checkMenuDataAccess(); refreshSettingsUI() }
+ @objc func recheckPermissions() { permissionRecovery.retry(); permissionCheckRequested=true; checkMenuDataAccess(); refreshSettingsUI() }
  @objc func finishSetup() {
   guard accessReady else { showSettings(destination:"permissions"); return }
   setupPending=false; UserDefaults.standard.set(true,forKey:"setupComplete")
@@ -712,14 +772,16 @@ final class Controller: NSObject, NSApplicationDelegate {
     self.visibilityMessage="The recovery helper stopped. SideTray is restoring icons. Use Check Permissions to restart it."
     self.refreshSettingsUI()
    }
-   if !self.menuDataReadable && !self.recoveryBlocked && (self.setupPending || self.settings?.isVisible == true) { self.checkMenuDataAccess() }
-   let next=AXIsProcessTrusted()
+   if !self.menuDataReadable && !self.recoveryBlocked && (self.setupPending || self.permissionRecovery.isActive || self.settings?.isVisible == true) { self.checkMenuDataAccess() }
+   let next=self.controlAccessGranted
    if next != self.trusted {
     self.trusted=next
     self.installGlobalMonitor()
     if !next {
      self.stopMenuWatch(); self.activation.cancel(); self.ordering.cancel(); self.restoreVisibility(); self.panel.orderOut(nil)
      if self.settings?.isVisible == true { self.refreshSettingsUI() }
+    } else if self.permissionRecovery.isActive {
+     self.updatePermissionRecovery(); self.refreshSettingsUI()
     } else if self.canManageVisibility {
      self.applyVisibility { ok in
       if ok { self.visibilityMessage=""; self.arrangeControl() }
@@ -727,6 +789,7 @@ final class Controller: NSObject, NSApplicationDelegate {
      }
     } else { self.visibilityMessage=""; self.refreshSettingsUI() }
    }
+   self.updatePermissionRecovery()
    // Applications can create their status item long after their launch event.
    // Reconcile actual menu items, not all running apps or helper processes.
    if self.canManageVisibility,!self.suspended,!self.openingMenu,!self.placementBusy,

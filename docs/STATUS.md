@@ -1,5 +1,13 @@
 # Beta status
 
+## 0.2.3 (build 8)
+
+After an update, missing Device Control or Full Disk Access automatically opens **Restore access to SideTray**. Only missing permissions offer approval actions. SideTray checks quietly and resumes saved choices after permissions and menu-bar recovery are ready. Working grants are retained; macOS approval remains the user's action.
+
+Verified: nine pure suites, production controller/Settings tests with simulated permission states, and visual review of the recovery screen. Coverage includes Full Disk Access alone being missing, partial grants, unavailable settings, no repeated foregrounding, one resume, failed-resume retry, and saved choices. The universal staged build, archive signature, extracted code signatures and exact bundled licenses passed. These checks do not simulate macOS granting access or replace the user's live update test; the installed app and its grants were left untouched.
+
+The user confirmed the previous 0.2.2 update succeeded. Apple Developer ID signing and notarization remain deferred.
+
 ## 0.2.2 (build 7)
 
 Feed checks use a fresh request URL. Installation retries once if the feed contradicts the verified download; continued disagreement keeps the download and shows a retry message instead of “up to date.” Signature checks and explicit installation approval remain required.
