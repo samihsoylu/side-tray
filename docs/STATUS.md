@@ -1,5 +1,9 @@
 # Beta status
 
+## 0.2.1 (build 6)
+
+Packages the GNU GPL v3.0 license in the app bundle. Release preparation rejects missing or modified GPL and Sparkle license files. No app interaction or updater logic changed. Version 0.2.0 can discover this release through the beta feed; the production upgrade test is pending user testing.
+
 ## 0.2.0 (build 5)
 
 Adds optional daily GitHub update checks and verified background downloads. Installation requires **Install and Relaunch**. Pending downloads survive relaunch. Normal Quit before approval never installs an update. Apple Developer ID signing and notarization remain deferred.
