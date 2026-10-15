@@ -7,6 +7,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>SideTray beta updates for macOS.</description>
         <language>en</language>
         <item>
+            <title>0.2.5</title>
+            <pubDate>Thu, 15 Oct 2026 22:39:34 +0200</pubDate>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>10</sparkle:version>
+            <sparkle:shortVersionString>0.2.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.5/SideTray-0.2.5.zip" length="2850491" type="application/octet-stream" sparkle:edSignature="gb1Cu6cP5hQSTZbCX/kU9KpqCXBAPihnjq8zJuov8/OTETj/px2+y4Grq1QDJoQvReSguhVfaOAR9+AIQodhBg=="></enclosure>
+        <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion></item>
+        <item>
             <title>0.2.4</title>
             <pubDate>Thu, 15 Oct 2026 22:34:22 +0200</pubDate>
             <sparkle:channel>beta</sparkle:channel>
@@ -14,7 +23,8 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:shortVersionString>0.2.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.4/SideTray-0.2.4.zip" length="2850076" type="application/octet-stream" sparkle:edSignature="GMnlZErjZqcecbElIJpDl+BvidnA+Sxz6CKgrwdC0Nt1nbtPz4zuU5yvjdUQNN+nr3bF37flnnd1Xg+MBWGRDA=="></enclosure>
-        <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion></item>
+            <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion>
+        </item>
         <item>
             <title>0.2.3</title>
             <pubDate>Thu, 15 Oct 2026 22:16:08 +0200</pubDate>
@@ -35,18 +45,8 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.2/SideTray-0.2.2.zip" length="2835234" type="application/octet-stream" sparkle:edSignature="HlYkcQi72+SZUGpMUBQqPCMdpNi5kqqgdEj2bpZlMAsMbhbOpSQjUYBSMNPciN+nbkbiXE9fZccJLdQNacvXAQ=="></enclosure>
             <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion>
         </item>
-        <item>
-            <title>0.2.1</title>
-            <pubDate>Thu, 15 Oct 2026 21:31:04 +0200</pubDate>
-            <sparkle:channel>beta</sparkle:channel>
-            <sparkle:version>6</sparkle:version>
-            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.1/SideTray-0.2.1.zip" length="2822229" type="application/octet-stream" sparkle:edSignature="wPlYAylHoBJ3E+UxGgvl94fSzuotzUEJrD1GjpUG81885w7yBHpJUMfKmwtjlrEHrsOANXrQfWPQfVs/0yoCBQ=="></enclosure>
-            <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion>
-        </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 3LgzYwzo5NjKLDz/tMooYnXQOkqzW51GNAGqKzVZy4YOuEdlu0pakLaCeSv5ZzKc2rWZ4GLAAKhtZqlZITo5Cw==
-length: 3590
+edSignature: 00VdcFy2MixCAly7m5Z23wL9Q2nifRMA7/DPGRkFBW0TbHnneTAovCRsrVXo7ye71M1e8tSJy47Qoa09ZkK1AA==
+length: 3591
 -->
