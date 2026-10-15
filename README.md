@@ -34,8 +34,6 @@ Apple signing and notarization are pending. macOS may require **Open Anyway** in
 
 SideTray uses internal macOS 27 settings and should not run alongside another menu bar manager. Testing on other Macs is ongoing. [Beta status](docs/STATUS.md)
 
-## Source and author
+## Source
 
 Built with Swift and AppKit. [Build instructions](docs/DEVELOPMENT.md). Licensed under the [GNU General Public License v3.0](LICENSE). [Sparkle license](ThirdParty/Sparkle-LICENSE.txt).
-
-Samih Soylu · [mail@samihsoylu.nl](mailto:mail@samihsoylu.nl)
