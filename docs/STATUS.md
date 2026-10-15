@@ -1,8 +1,14 @@
 # Beta status
 
+## 0.2.2 (build 7)
+
+Feed checks use a fresh request URL. Installation retries once if the feed contradicts the verified download; continued disagreement keeps the download and shows a retry message instead of “up to date.” Signature checks and explicit installation approval remain required.
+
+Verified: all eight pure suites; signed fixture feeds covering both no newer update and an older-than-approved update; one retry only, distinct request tokens, retained download, and actual replacement/relaunch after transient disagreement. Existing tampered-feed/archive, persistence and ordinary-Quit checks also passed. The universal staged bundle passed signing and packaging checks. The installed app is left for user-driven updating.
+
 ## 0.2.1 (build 6)
 
-Packages the GNU GPL v3.0 license in the app bundle. Release preparation rejects missing or modified GPL and Sparkle license files. No app interaction or updater logic changed. Version 0.2.0 can discover this release through the beta feed; the production upgrade test is pending user testing.
+Packages the GNU GPL v3.0 license in the app bundle. Release preparation rejects missing or modified GPL and Sparkle license files. No app interaction or updater logic changed. Version 0.2.0 can discover this release through the beta feed; the user confirmed the 0.2.0 → 0.2.1 update succeeded.
 
 ## 0.2.0 (build 5)
 

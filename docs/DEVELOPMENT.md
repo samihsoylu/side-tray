@@ -29,3 +29,9 @@ The fixture has its own bundle ID, preferences, cache, disposable signing key an
 For an end-to-end installation, launch `build/update-integration/installed/SideTray Update Test.app`, wait for the download and click **Install and Relaunch**. Verify its title changes from Build 1 to Build 2. Quit the fixture and stop the local HTTP server afterward. Local HTTP allowances exist only in the fixture compilation; production permits HTTPS GitHub release assets.
 
 This does not prove Intel runtime, a clean Mac’s permissions flow, or production Gatekeeper behavior.
+
+To test feed propagation recovery, stop the local HTTP server, rebuild the fixture,
+and run `python3 scripts/test-update-feed-recovery.py`. It starts its own server,
+serves signed conflicting feeds, checks distinct request URLs and one retry only,
+then verifies an actual fixture replacement and relaunch. The fixture exits itself;
+the installed production SideTray is not changed.

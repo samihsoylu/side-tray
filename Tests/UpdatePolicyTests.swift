@@ -22,6 +22,13 @@ import CryptoKit
   for sig in ["",Data(repeating:0,count:63).base64EncodedString()] {
    do { _=try UpdateCandidate(build:"6",version:"0.2.1",url:url,length:1,signature:sig,repository:"samihsoylu/side-tray"); expect(false,"Accepted invalid signature length") } catch {}
   }
+  let base="https://raw.githubusercontent.com/example/app/main/appcast.xml?channel=beta&sidetray_check=old"
+  let first=UpdateFeedRequest.url(base,token:"first")!, second=UpdateFeedRequest.url(base,token:"second")!
+  expect(first != second,"Fresh checks reused a feed URL")
+  let parts=URLComponents(string:first)!
+  expect(parts.host == "raw.githubusercontent.com" && parts.path == "/example/app/main/appcast.xml","Changed feed destination")
+  expect(parts.queryItems!.filter { $0.name == "sidetray_check" }.map(\.value) == ["first"],"Duplicated stale request token")
+  expect(parts.queryItems!.contains(URLQueryItem(name:"channel",value:"beta")),"Removed existing feed parameters")
   print("Update policy tests passed")
  }
 }

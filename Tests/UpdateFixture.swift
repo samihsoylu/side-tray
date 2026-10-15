@@ -6,8 +6,16 @@ final class UpdateFixture:NSObject,NSApplicationDelegate {
  let status=NSTextField(wrappingLabelWithString:"")
  let install=NSButton(title:"Install and Relaunch",target:nil,action:nil)
  var window:NSWindow!
+ var triggeredInstall=false
  func applicationDidFinishLaunching(_ notification:Notification) {
   let version=Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as! String
+  if version == "2",UserDefaults.standard.bool(forKey:"FixtureExitAfterRelaunch") {
+   UserDefaults.standard.removeObject(forKey:"FixtureExitAfterRelaunch")
+   let marker=FileManager.default.urls(for:.cachesDirectory,in:.userDomainMask)[0].appendingPathComponent("io.sidetray.test.updater/relaunched-build.txt")
+   try! FileManager.default.createDirectory(at:marker.deletingLastPathComponent(),withIntermediateDirectories:true)
+   try! Data(version.utf8).write(to:marker)
+   NSApp.terminate(nil); return
+  }
   window=NSWindow(contentRect:NSRect(x:100,y:100,width:500,height:220),styleMask:[.titled,.closable],backing:.buffered,defer:false)
   window.title="SideTray Update Test — Build \(version)"
   let check=NSButton(title:"Check for Updates",target:self,action:#selector(checkUpdate))
@@ -19,6 +27,15 @@ final class UpdateFixture:NSObject,NSApplicationDelegate {
    guard let self else { return }; self.status.stringValue=self.updates.message
    self.install.isEnabled=self.updates.candidate != nil && !self.updates.installing
    print("UPDATE_STATE: \(self.updates.message)"); fflush(stdout)
+   if CommandLine.arguments.contains("--install-when-ready"),self.updates.candidate != nil,!self.triggeredInstall {
+    self.triggeredInstall=true
+    UserDefaults.standard.set(true,forKey:"FixtureExitAfterRelaunch")
+    DispatchQueue.main.async { self.updates.install() }
+   }
+   if CommandLine.arguments.contains("--quit-on-conflict"),self.updates.message.hasPrefix("The update feed still") {
+    UserDefaults.standard.removeObject(forKey:"FixtureExitAfterRelaunch")
+    NSApp.terminate(nil)
+   }
    if CommandLine.arguments.contains("--quit-when-ready"),self.updates.candidate != nil { NSApp.terminate(nil) }
    if CommandLine.arguments.contains("--quit-on-result"),!self.updates.busy,self.updates.message != "Updates are checked daily. Installation always waits for you." { NSApp.terminate(nil) }
   }

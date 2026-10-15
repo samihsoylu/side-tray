@@ -6,6 +6,16 @@ import Sparkle
 // an information probe and an inert, signature-verified download.
 final class UpdateInstallDriver:SPUStandardUserDriver {
  var approvedBuild:String?
+ var feedConflict=false
+ override func showUpdateNotFoundWithError(_ error:Error,acknowledgement:@escaping ()->Void) {
+  // A downloaded, approved candidate makes “up to date” a conflicting result.
+  if approvedBuild != nil { acknowledgement() }
+  else { super.showUpdateNotFoundWithError(error,acknowledgement:acknowledgement) }
+ }
+ override func showUpdaterError(_ error:Error,acknowledgement:@escaping ()->Void) {
+  if approvedBuild != nil && feedConflict { acknowledgement() }
+  else { super.showUpdaterError(error,acknowledgement:acknowledgement) }
+ }
  override func showUpdateFound(with appcastItem:SUAppcastItem,state:SPUUserUpdateState,reply:@escaping (SPUUserUpdateChoice)->Void) {
   guard approvedBuild == appcastItem.versionString,!appcastItem.isInformationOnlyUpdate else { reply(.dismiss); return }
   reply(.install)
@@ -35,6 +45,8 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
  private var updater:SPUUpdater?
  private let driver=UpdateInstallDriver(hostBundle:.main,delegate:nil)
  private var sawCandidate=false
+ private var feedRequestToken=UUID().uuidString
+ private var installationRetryCount=0
  private var cacheDirectory:URL {
   FileManager.default.urls(for:.cachesDirectory,in:.userDomainMask)[0].appendingPathComponent("\(Bundle.main.bundleIdentifier ?? "io.sidetray.prototype")/Updates",isDirectory:true)
  }
@@ -64,6 +76,7 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
   sawCandidate=false; busy=true
   message="Checking for updates…"; changed?()
   UserDefaults.standard.set(Date(),forKey:"SideTrayLastUpdateAttempt")
+  feedRequestToken=UUID().uuidString
   updater.checkForUpdateInformation()
  }
  private var supportedInstallation:Bool {
@@ -101,8 +114,14 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
   }
   catch { fail(error); return }
   // Only this explicit action authorizes Sparkle to begin an installation.
+  installationRetryCount=0
   installing=true; driver.approvedBuild=candidate.build
   message="Preparing to install \(candidate.version)…"; changed?()
+  beginInstallationCheck(updater)
+ }
+ private func beginInstallationCheck(_ updater:SPUUpdater) {
+  driver.feedConflict=false
+  feedRequestToken=UUID().uuidString
   updater.checkForUpdates()
  }
  func cancelDownload() {
@@ -112,6 +131,10 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
  func updater(_ updater:SPUUpdater,shouldProceedWithUpdate item:SUAppcastItem,updateCheck:SPUUpdateCheck) throws {
   let next=try makeCandidate(item)
   if updateCheck != .updateInformation {
+   if installing,let candidate,next.build.compare(candidate.build,options:.numeric) == .orderedAscending {
+    driver.feedConflict=true
+    throw UpdateFailure.staleFeed
+   }
    guard installing,let candidate,candidate == next,driver.approvedBuild == next.build else { throw UpdateFailure.releaseChanged }
   }
  }
@@ -135,7 +158,24 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
  }
  func updater(_ updater:SPUUpdater,didFinishUpdateCycleFor updateCheck:SPUUpdateCheck,error:Error?) {
   if installing {
-   installing=false; driver.approvedBuild=nil
+   let nsError=error as NSError?
+   let noUpdate=nsError.map { $0.domain == SUSparkleErrorDomain && $0.code == SUError.noUpdateError.rawValue } ?? false
+   if (noUpdate || driver.feedConflict),let candidate {
+    if installationRetryCount == 0 {
+     installationRetryCount=1
+     message="The update feed doesn’t match \(candidate.version). Checking again…"; changed?()
+     // Let Sparkle finish its old cycle before starting the single retry.
+     DispatchQueue.main.async { [weak self] in
+      guard let self,self.installing else { return }
+      self.beginInstallationCheck(updater)
+     }
+    } else {
+     installing=false; driver.approvedBuild=nil; driver.feedConflict=false
+     message="The update feed still doesn’t match \(candidate.version). Your download is ready; try installing again later."; changed?()
+    }
+    return
+   }
+   installing=false; driver.approvedBuild=nil; driver.feedConflict=false
    if let error { fail(error) }
    else { message="Update installation ended. Check again to retry."; changed?() }
   } else if !sawCandidate {
@@ -154,6 +194,10 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
    }
    changed?()
   }
+ }
+ func feedURLString(for updater:SPUUpdater)->String? {
+  guard let base=Bundle.main.object(forInfoDictionaryKey:"SUFeedURL") as? String else { return nil }
+  return UpdateFeedRequest.url(base,token:feedRequestToken)
  }
  func allowedChannels(for updater:SPUUpdater)->Set<String> { ["beta"] }
  func updater(_ updater:SPUUpdater,shouldDownloadReleaseNotesForUpdate updateItem:SUAppcastItem)->Bool { false }

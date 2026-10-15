@@ -32,4 +32,6 @@ Background checks use Sparkle’s information-only mode. SideTray downloads to a
 
 Silent install-on-quit is disabled. Normal Quit before approval leaves the current app in place. After explicit approval, Sparkle may complete installation when the app quits. SideTray restores visibility first and waits for its recovery helper to stop. A failed restoration blocks the update’s quit path rather than offering Quit Anyway.
 
+Each feed check uses a fresh request URL. If the install check cannot find the already downloaded version or selects an older one, SideTray retries once. A repeated conflict keeps the verified download and explains that installation should be retried later, without showing “up to date.” A different newer release still requires a new download and approval.
+
 Signature errors, offline checks and changed releases leave the installed app unchanged. Sparkle handles replacement failures; the isolated fixture validates successful replacement/relaunch, not every possible disk or power failure.

@@ -31,14 +31,27 @@ struct UpdateCandidate:Equatable,Codable {
  }
 }
 enum UpdateFailure:Error,LocalizedError {
- case invalidRelease, invalidSignature, releaseChanged, unsupported, download
+ case invalidRelease, invalidSignature, releaseChanged, staleFeed, unsupported, download
  var errorDescription:String? {
   switch self {
   case .invalidRelease: return "The release information could not be verified. Your installed app is unchanged."
   case .invalidSignature: return "The update failed its security check. Your installed app is unchanged."
   case .releaseChanged: return "The release changed. Check again to download and approve the new version."
+  case .staleFeed: return "The update feed does not match the downloaded version. Try installing again later."
   case .unsupported: return "Updates require the installed Applications copy on a supported macOS version."
   case .download: return "The update could not be downloaded. Check your connection and try again."
   }
+ }
+}
+
+// A new per-check token avoids reusing a CDN response during release propagation.
+// The token contains no device identity; Sparkle still verifies the signed feed.
+enum UpdateFeedRequest {
+ static func url(_ base:String,token:String)->String? {
+  guard var parts=URLComponents(string:base) else { return nil }
+  var query=(parts.queryItems ?? []).filter { $0.name != "sidetray_check" }
+  query.append(URLQueryItem(name:"sidetray_check",value:token))
+  parts.queryItems=query
+  return parts.url?.absoluteString
  }
 }

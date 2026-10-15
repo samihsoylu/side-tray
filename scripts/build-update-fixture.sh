@@ -26,4 +26,4 @@ for version in ('1','2'):
  subprocess.run(['codesign','--force','--sign','-',str(app)],check=True)
 subprocess.run(['ditto','-c','-k','--keepParent',str(root/'release/SideTray Update Test.app'),str(root/'release/UpdateTest.zip')],check=True)
 PY
-build/dependencies/Sparkle-2.10.0/bin/generate_appcast --ed-key-file "$fixture_root/test-key" --download-url-prefix http://127.0.0.1:18743/ "$fixture_root/release"
+build/dependencies/Sparkle-2.10.0/bin/generate_appcast --ed-key-file "$fixture_root/test-key" --channel beta --download-url-prefix http://127.0.0.1:18743/ "$fixture_root/release"
