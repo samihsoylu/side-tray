@@ -16,6 +16,8 @@ The update fixture has no menu-control permissions or production user data. It e
 
 0.1.1 remains the prior daily-use beta. Its scoped live checks covered permission recognition, native menus, normal Quit restoring icons and relaunch preserving placement. No broad all-app/live-hardware claim is made for 0.2.0.
 
+Published as [0.2.0 Beta](https://github.com/samihsoylu/side-tray/releases/tag/v0.2.0). The public ZIP matches the prepared archive, and both public feed and archive signatures were verified. Existing builds without the updater require one manual installation. No full replacement of the menu-managing production app was performed in this session.
+
 ## Remaining compatibility evidence
 
 Second-Mac setup, Intel execution, multiple displays and ordinary sleep/login cycles require user testing. The implementation depends on macOS 27's internal menu-bar preferences; other major versions are blocked pending validation. Simultaneous menu-bar managers are unsupported.
