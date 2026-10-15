@@ -7,6 +7,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>SideTray beta updates for macOS.</description>
         <language>en</language>
         <item>
+            <title>0.2.2</title>
+            <pubDate>Thu, 15 Oct 2026 21:58:24 +0200</pubDate>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.2/SideTray-0.2.2.zip" length="2835234" type="application/octet-stream" sparkle:edSignature="HlYkcQi72+SZUGpMUBQqPCMdpNi5kqqgdEj2bpZlMAsMbhbOpSQjUYBSMNPciN+nbkbiXE9fZccJLdQNacvXAQ=="></enclosure>
+        <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion></item>
+        <item>
             <title>0.2.1</title>
             <pubDate>Thu, 15 Oct 2026 21:31:04 +0200</pubDate>
             <sparkle:channel>beta</sparkle:channel>
@@ -14,7 +23,8 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/samihsoylu/side-tray/releases/download/v0.2.1/SideTray-0.2.1.zip" length="2822229" type="application/octet-stream" sparkle:edSignature="wPlYAylHoBJ3E+UxGgvl94fSzuotzUEJrD1GjpUG81885w7yBHpJUMfKmwtjlrEHrsOANXrQfWPQfVs/0yoCBQ=="></enclosure>
-        <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion></item>
+            <sparkle:maximumSystemVersion>27.999</sparkle:maximumSystemVersion>
+        </item>
         <item>
             <title>0.2.0</title>
             <pubDate>Thu, 15 Oct 2026 20:40:21 +0200</pubDate>
@@ -27,6 +37,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: S1HJTQTFw0N6vGzDteDPChvI2DGR7Y7+Vc7+iqkiwpPoH91+ULANZp6IY9F1r52Q57sDDPfRsbzS6qkb8pSVDw==
-length: 2096
+edSignature: 2OSkhwtCAmdewtvX+j+Im/cA27DidQCQjLB1/Wz4PklMQu0Q+/xnQN/5puYYe/xJQ1mfR+HAd7hsQ4w6S04QAA==
+length: 2843
 -->
