@@ -90,8 +90,18 @@ final class UXFixture:NSObject {
   let choices=owner.placement.visible
   try check(owner.updatePermissionRecovery())
   try check(owner.settingsTab == "permissions" && owner.settings!.isVisible)
-  try check(owner.settingsUI!.navigation.isHidden)
+  try check(!owner.settingsUI!.navigation.isHidden && !owner.settingsUI!.navigation.isEnabled(forSegment:0))
   try check(visibleText().contains("Restore access to SideTray"))
+  // Exercise the exact menu target, not only direct Settings navigation.
+  owner.checkUpdates()
+  try check(owner.settingsTab == "general","Update Ready must reach General without permissions")
+  owner.refreshSettingsUI(); owner.updatePermissionRecovery()
+  try check(owner.settingsTab == "general","Polling must not redirect an update back to Permissions")
+  try check(visibleText().contains("Updates"))
+  try check(owner.settingsUI!.navigation.isEnabled(forSegment:1))
+  owner.showSettings(destination:"apps")
+  try check(owner.settingsTab == "permissions","Placement stays gated during recovery")
+
   let missingButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Open System Settings…" && !$0.isHiddenOrHasHiddenAncestor }
   try check(missingButtons.count == 1,"Only the missing grant should offer an action")
   owner.menuDataAccess = .unavailable; owner.refreshSettingsUI()
@@ -120,7 +130,7 @@ final class UXFixture:NSObject {
   try check(owner.placement.visible == choices,"Permission recovery must preserve choices")
   owner.showSettings(destination:"permissions")
   try check(visibleText().contains("Your saved app choices have been restored"))
-  try check(!owner.settingsUI!.navigation.isHidden)
+  try check(!owner.settingsUI!.navigation.isHidden && owner.settingsUI!.navigation.isEnabled(forSegment:0))
   owner.permissionRecovery=PermissionRecovery()
   owner.fixtureInstalled=nil; owner.fixtureControlAccess=nil; owner.fixtureHelperRunning=nil; owner.fixtureResumeVisibility=nil
   owner.startupRecoveryComplete=false; owner.menuDataReadable=false

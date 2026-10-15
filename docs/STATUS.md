@@ -1,5 +1,11 @@
 # Beta status
 
+## 0.2.5 (build 10)
+
+Fixes **Update Ready…** and **Check for Updates…** being redirected to Permissions during access recovery. General settings remain accessible while app placement stays disabled. Permission polling no longer pulls the update page away. Existing quit-time icon restoration safeguards are unchanged.
+
+Verified the exact menu action in the controller/Settings fixture with missing access, repeated recovery/UI refreshes, and Apps remaining gated until recovery completes. Visually confirmed General and Updates are reachable from the recovery screen. Universal staging build passed. The production app was not updated by these tests.
+
 ## 0.2.4 (build 9)
 
 Device Control now starts with a native **Request Access…** action. A later click opens Settings if macOS suppresses the prompt; the app does not open a competing window while the request is pending. Full Disk Access retains its required System Settings approval, with **Show App in Finder** to locate the correct bundle. First-time setup says **Set Up SideTray**, without reapproval language.

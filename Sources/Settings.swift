@@ -203,9 +203,11 @@ final class SettingsUI:NSObject {
   let granted=owner.controlAccessGranted, dataReady=owner.menuDataReadable
   let needsPermission = !granted || owner.menuDataAccess == .permissionRequired
   let recovering = !owner.setupPending && owner.permissionRecovery.isActive
-  navigation.isHidden=recovering
-  window.title=owner.setupPending ? "Set Up SideTray" : recovering ? "Restore access to SideTray" : "SideTray Settings"
-  if recovering && selected != "permissions" { select("permissions") }
+  // Recovery gates menu placement, not maintenance such as installing updates.
+  navigation.isHidden=false
+  navigation.setEnabled(!recovering,forSegment:0)
+  if recovering && selected == "apps" { select("permissions") }
+  window.title=owner.setupPending ? "Set Up SideTray" : recovering && selected == "permissions" ? "Restore access to SideTray" : "SideTray Settings"
   setupTitle.stringValue=owner.setupPending ? "Set Up SideTray" : (owner.accessReady ? "SideTray is ready" : needsPermission ? "Access needed" : "Connecting to menu bar settings")
   if owner.recoveryBlocked { setupTitle.stringValue="Recovery needs attention" }
   setupDescription.stringValue = !owner.isInstalled ? "Move SideTray to Applications and open it there to continue." : owner.setupPending ? "Allow these two permissions, then choose which apps stay visible. Your menu bar stays unchanged until you start SideTray." : "Restore the missing access below. Your app choices are saved."
@@ -318,7 +320,7 @@ extension Controller {
  func showSettings(destination:String?=nil) {
   panel.orderOut(nil)
   if settingsUI == nil { settingsUI=SettingsUI(owner:self); settings=settingsUI?.window }
-  settingsUI?.select(permissionRecovery.isActive ? "permissions" : destination); settingsUI?.update()
+  settingsUI?.select(destination ?? (permissionRecovery.isActive ? "permissions" : nil)); settingsUI?.update()
   settings?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps:true)
  }
  func refreshSettingsUI() { settingsUI?.update() }

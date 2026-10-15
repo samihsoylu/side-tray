@@ -22,6 +22,10 @@ If SideTray cannot restore icons, choose **Keep SideTray Open**, follow the mess
 
 During an update, a failed restoration cancels quitting; the updater must wait until recovery succeeds. It does not offer to bypass recovery.
 
+## Update Ready opens Permissions instead
+
+Versions 0.2.3 and 0.2.4 can redirect the update page while access is missing. Version 0.2.5 fixes this. To get past the older version, either restore its permissions once and use the updater, or quit SideTray normally and replace the app in Applications with the new release ZIP’s SideTray.app. Keep your saved settings and recovery files.
+
 ## An update will not download
 
 Try **Check for Updates** again after confirming your connection. A failed signature check leaves the installed app unchanged. Do not install an archive that fails verification. Report the SideTray version, macOS version, and the displayed error; do not include passwords or unrelated personal information.
