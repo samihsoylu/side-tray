@@ -16,7 +16,7 @@ The update fixture has no menu-control permissions or production user data. It e
 
 0.1.1 remains the prior daily-use beta. Its scoped live checks covered permission recognition, native menus, normal Quit restoring icons and relaunch preserving placement. No broad all-app/live-hardware claim is made for 0.2.0.
 
-Published as [0.2.0 Beta](https://github.com/samihsoylu/side-tray/releases/tag/v0.2.0). The public ZIP matches the prepared archive, and both public feed and archive signatures were verified. Existing builds without the updater require one manual installation. No full replacement of the menu-managing production app was performed in this session.
+Published as [0.2.0 Beta](https://github.com/samihsoylu/side-tray/releases/tag/v0.2.0). The public ZIP matches the prepared archive, and both public feed and archive signatures were verified. Existing builds without the updater require one manual installation. The published 0.2.0 archive was manually installed on the development Mac. Its About page confirms version 0.2.0 (5); refreshed existing permissions report Ready and saved choices are retained. A live manual update check against the public feed reports “You’re up to date.” No newer production release is available, so production upgrade/relaunch remains unverified; that flow was exercised in the isolated fixture above.
 
 ## Remaining compatibility evidence
 
