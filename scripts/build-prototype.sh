@@ -12,6 +12,7 @@ elif pgrep -x SideTray >/dev/null; then
 fi
 mkdir -p "$task_bundle/Contents/MacOS" "$task_bundle/Contents/Resources" build/architectures
 cp Assets/SideTray.icns "$task_bundle/Contents/Resources/SideTray.icns"
+cp ThirdParty/Sparkle-LICENSE.txt "$task_bundle/Contents/Resources/Sparkle-LICENSE.txt"
 task_sdk="$(xcrun --sdk macosx --show-sdk-path)"
 for task_arch in arm64 x86_64; do
  xcrun clang -fobjc-arc -isysroot "$task_sdk" -target "${task_arch}-apple-macos26.0" -c Sources/NativeVisibility.m -o "build/architectures/Visibility-${task_arch}.o"
