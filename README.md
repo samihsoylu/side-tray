@@ -5,64 +5,37 @@
 <h1 align="center">SideTray</h1>
 
 <p align="center">
-  <strong>A little more room in your Mac’s menu bar.</strong><br>
-  Keep your everyday apps visible. Tuck everything else into a tray, one click away.
+  Choose which apps stay in your Mac’s menu bar. Open the rest from a compact tray beneath a three-dot button.
 </p>
 
 <p align="center">
   <a href="https://github.com/samihsoylu/side-tray/releases"><strong>Download the beta</strong></a> ·
-  <a href="#get-started">Get started</a> ·
-  <a href="#updates">Updates</a> ·
+  <a href="docs/HELP.md">Help</a> ·
   <a href="https://github.com/samihsoylu/side-tray/issues">Report an issue</a>
 </p>
 
-<p align="center">macOS 27 · Apple Silicon and Intel · Built with Swift and AppKit</p>
-
-## Your menu bar, with room to breathe
-
-SideTray puts less-used menu bar apps behind a three-dot button. Click it to open a compact row directly below the menu bar. The tray expands leftward, so your icons remain reachable even on a Mac with a camera notch.
-
-- **Keep the essentials close.** Choose which apps stay visible, to the right of the three-dot button.
-- **Open the menus you already know.** Click a tray icon to open that app’s real menu. Its menu bar icon stays available while the menu is open.
-- **Stay out of the way.** Click elsewhere or press Escape to close the tray.
-- **Make it yours.** Set a keyboard shortcut and choose whether SideTray starts when you log in.
+<p align="center">macOS 27 · Apple Silicon and Intel</p>
 
 ## Get started
 
-1. [Download the latest beta](https://github.com/samihsoylu/side-tray/releases), unzip it, and move **SideTray.app** to **Applications**.
-2. Open SideTray. Setup guides you to the two required permissions in **System Settings → Privacy & Security**.
-3. Choose the apps you want to keep in the menu bar, then click **Start SideTray**.
+1. Download the beta, unzip it, and move **SideTray.app** to **Applications**.
+2. Open SideTray and follow setup to grant its permissions in **System Settings → Privacy & Security**.
+3. Select the apps you want to keep visible, then click **Start SideTray**. Unchecked and new apps go into the tray.
 
-In **Settings → Apps**, checked apps stay visible; unchecked apps appear in the tray. New apps go into the tray by default. Right-click the three dots to open Settings, check for updates, or quit.
+Click a tray icon to open the app’s menu. Right-click the three dots for Settings, where you can change app visibility, set a keyboard shortcut, or enable launch at login.
 
-> **Beta installation:** SideTray is not yet Apple Developer ID signed or notarized. macOS may block the first launch. If you trust this download, use the app-specific **Open Anyway** option in Privacy & Security when offered. Do not turn off Gatekeeper. Earlier SideTray versions need a manual update to 0.2.0 before in-app updates are available.
+SideTray needs **Device Control and Data Access** to open app menus, and **Full Disk Access** for macOS’s protected menu bar settings. Full Disk Access is a broad permission; SideTray uses it for menu bar settings and recovery records. App choices stay on your Mac.
 
-## Why the permissions?
+## Updates and beta notes
 
-**Device Control and Data Access** lets SideTray find and open other apps’ menu bar items. **Full Disk Access** lets it read and change the protected macOS settings that control icon visibility. This is a broad permission; SideTray uses it for menu bar settings and their recovery records.
+SideTray checks GitHub daily and downloads verified updates. Click **Install and Relaunch** in **Settings → General** when you’re ready. Automatic checks are optional.
 
-Screen Recording is not required. App choices stay on your Mac. Update checks contact GitHub; SideTray does not send usage analytics or your app list.
+Apple signing and notarization are pending. macOS may require **Open Anyway** in Privacy & Security on first launch, or renewed permissions after an update. [Permission help](docs/HELP.md)
 
-## Updates
+SideTray uses internal macOS 27 settings and should not run alongside another menu bar manager. Testing on other Macs is ongoing. [Beta status](docs/STATUS.md)
 
-SideTray checks daily and downloads available updates. When one is ready, open **Settings → General** and click **Install and Relaunch**. You can turn automatic checks off or check manually. Quitting without choosing Install leaves your current version in place.
+## Source and author
 
-Downloads and the update feed are verified before installation. Apple signing and notarization are still pending, so macOS may ask you to renew permissions after an update. [Permission help](docs/HELP.md)
+Built with Swift and AppKit. [Build instructions](docs/DEVELOPMENT.md). Licensed under the [GNU General Public License v3.0](LICENSE). [Sparkle license](ThirdParty/Sparkle-LICENSE.txt).
 
-## Still in beta
-
-SideTray currently supports **macOS 27**. It uses macOS’s internal menu bar settings, which can change in future system updates. Avoid running it alongside another menu bar manager.
-
-The download includes Apple Silicon and Intel binaries. Live development testing has been on Apple Silicon; testing on other Macs, multiple displays, and everyday sleep/login cycles is ongoing. [Second-Mac test guide](SECOND-MAC-TEST.md)
-
-## For developers
-
-[Build and test](docs/DEVELOPMENT.md) · [Prepare a release](docs/RELEASING.md)
-
-Licensed under the [GNU General Public License v3.0](LICENSE). Sparkle’s license is included in [ThirdParty](ThirdParty/Sparkle-LICENSE.txt).
-
-## Author
-
-Samih Soylu
-
-[mail@samihsoylu.nl](mailto:mail@samihsoylu.nl)
+Samih Soylu · [mail@samihsoylu.nl](mailto:mail@samihsoylu.nl)
