@@ -24,7 +24,7 @@ release_dir="build/releases/v$release_version"
 mkdir -p "$release_dir"
 sh scripts/package-dmg.sh "$release_bundle" "$release_dir/SideTray-$release_version.dmg"
 if [ -f appcast-dmg.xml ]; then cp appcast-dmg.xml "$release_dir/appcast.xml"; fi
-build/dependencies/Sparkle-2.10.0/bin/generate_appcast --account io.sidetray.updates --channel beta --maximum-deltas 0 --download-url-prefix "https://github.com/samihsoylu/side-tray/releases/download/v$release_version/" "$release_dir"
+build/dependencies/Sparkle-2.10.0/bin/generate_appcast -o "$release_dir/appcast.xml" --account io.sidetray.updates --channel beta --maximum-deltas 0 --download-url-prefix "https://github.com/samihsoylu/side-tray/releases/download/v$release_version/" "$release_dir"
 # Bound the supported major version, even on a future system that can run the binary.
 python3 - "$release_dir/appcast.xml" <<'PY'
 import sys,xml.etree.ElementTree as ET
