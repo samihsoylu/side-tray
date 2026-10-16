@@ -2,11 +2,14 @@
 """Runs only the disposable updater fixture against the local test server."""
 from pathlib import Path
 import subprocess, plistlib, shutil
+import xml.etree.ElementTree as ET
+from urllib.parse import urlsplit
 root=Path('build/update-integration')
-app=root/'installed/SideTray Update Test.app'
+app=Path.home()/'Library/Caches/io.sidetray.test.updater/Installed/SideTray Update Test.app'
 binary=app/'Contents/MacOS/UpdateFixture'
-archive=root/'release/UpdateTest.zip'; feed=root/'release/appcast.xml'
-original_zip=archive.read_bytes(); original_feed=feed.read_bytes()
+feed=root/'release/appcast.xml'
+archive=root/'release'/Path(urlsplit(ET.parse(feed).find('./channel/item/enclosure').attrib['url']).path).name
+original_archive=archive.read_bytes(); original_feed=feed.read_bytes()
 def run(expected, clear=True):
  if clear: shutil.rmtree(Path.home()/"Library/Caches/io.sidetray.test.updater/Updates",ignore_errors=True)
  result=subprocess.run([str(binary),'--quit-on-result'],capture_output=True,text=True,timeout=30)
@@ -17,14 +20,14 @@ def run(expected, clear=True):
 try:
  run('downloaded and ready')
  run('downloaded and ready',clear=False)
- corrupt=bytearray(original_zip); corrupt[len(corrupt)//2]^=1; archive.write_bytes(corrupt)
+ corrupt=bytearray(original_archive); corrupt[len(corrupt)//2]^=1; archive.write_bytes(corrupt)
  run('failed its security check')
- archive.write_bytes(original_zip)
+ archive.write_bytes(original_archive)
  # Change a signed feed byte without re-signing it.
  feed.write_bytes(original_feed.replace(b'<title>',b'<title>modified ',1))
  run('Could not check for updates')
  feed.unlink()
  run('Could not check for updates')
 finally:
- archive.write_bytes(original_zip); feed.write_bytes(original_feed)
+ archive.write_bytes(original_archive); feed.write_bytes(original_feed)
 print('PASS: normal Quit after prefetch never replaced build 1')

@@ -19,11 +19,13 @@ struct UpdateCandidate:Equatable,Codable {
   guard !build.isEmpty, build.allSatisfy({ $0.isNumber || $0 == "." }),
         trustedURL, url.user == nil, url.password == nil,
         url.query == nil, url.fragment == nil,
-        url.pathExtension == "zip",
+        ["zip","dmg"].contains(url.pathExtension),
         length > 0, length <= Self.maximumBytes,
         let decoded=Data(base64Encoded:signature), decoded.count == 64 else { throw UpdateFailure.invalidRelease }
   self.build=build; self.version=version; self.url=url; self.length=length; self.signature=decoded
  }
+ var cacheFilename:String { "update."+url.pathExtension }
+ var contentType:String { url.pathExtension == "dmg" ? "application/x-apple-diskimage" : "application/zip" }
  func verify(_ data:Data,publicKey:String) throws {
   guard data.count == length,let keyData=Data(base64Encoded:publicKey),
         let key=try? Curve25519.Signing.PublicKey(rawRepresentation:keyData),

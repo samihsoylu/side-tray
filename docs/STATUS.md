@@ -1,5 +1,13 @@
 # Beta status
 
+## 0.2.6 (build 11)
+
+Releases now use a DMG containing SideTray, an Applications shortcut and first-opening instructions. The updater accepts signed DMGs and retains ZIP cache compatibility. Versions before 0.2.6 require one manual DMG install; their existing ZIP feed remains unchanged. Future versions use the separate DMG feed.
+
+Verified the mounted Finder layout, readable installation guide, Applications shortcut, bundled licenses and app signature. Both the isolated DMG and legacy ZIP updater passed signed download, cache persistence, tamper rejection, ordinary Quit without installation, bounded stale-feed recovery and actual replacement/relaunch from test build 1 to build 2. The fixture installs in its own cache directory; an initial test under Documents waited for folder permission and was stopped without granting access.
+
+The release script builds and tests, validates the mounted artifact, publishes with the GitHub CLI, compares the public download and verifies its signature before publishing the signed feed. It never installs SideTray on the development Mac. Developer ID signing and notarization remain deferred; the included guide explains the macOS first-open exception.
+
 ## 0.2.5 (build 10)
 
 Fixes **Update Ready…** and **Check for Updates…** being redirected to Permissions during access recovery. General settings remain accessible while app placement stays disabled. Permission polling no longer pulls the update page away. Existing quit-time icon restoration safeguards are unchanged.

@@ -22,15 +22,15 @@ The pure suite checks permission recovery transitions. The UX fixture exercises 
 ## Isolated update tests
 
 ```sh
-sh scripts/build-update-fixture.sh
+SIDETRAY_UPDATE_FORMAT=dmg sh scripts/build-update-fixture.sh
 python3 -m http.server 18743 --bind 127.0.0.1 --directory build/update-integration/release
 # In another terminal:
 python3 scripts/test-update-downloads.py
 ```
 
-The fixture has its own bundle ID, preferences, cache, disposable signing key and localhost feed. It never runs SideTray’s permissions or menu-management code. Tests reject modified archives, modified feeds and missing feeds, check a downloaded update survives relaunch, and verify ordinary Quit never installs it.
+The fixture has its own bundle ID, preferences, cache, disposable signing key and localhost feed. Its installed bundle lives in its cache directory, outside protected Documents, so replacement does not require access to personal files. Set `SIDETRAY_UPDATE_FORMAT=zip` to verify legacy archive compatibility; use `dmg` for releases. It never runs SideTray’s permissions or menu-management code. Tests reject modified archives, modified feeds and missing feeds, check a downloaded update survives relaunch, and verify ordinary Quit never installs it.
 
-For an end-to-end installation, launch `build/update-integration/installed/SideTray Update Test.app`, wait for the download and click **Install and Relaunch**. Verify its title changes from Build 1 to Build 2. Quit the fixture and stop the local HTTP server afterward. Local HTTP allowances exist only in the fixture compilation; production permits HTTPS GitHub release assets.
+For an end-to-end installation, launch `~/Library/Caches/io.sidetray.test.updater/Installed/SideTray Update Test.app`, wait for the download and click **Install and Relaunch**. Verify its title changes from Build 1 to Build 2. Quit the fixture and stop the local HTTP server afterward. Local HTTP allowances exist only in the fixture compilation; production permits HTTPS GitHub release assets.
 
 This does not prove Intel runtime, a clean Mac’s permissions flow, or production Gatekeeper behavior.
 

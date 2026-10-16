@@ -9,6 +9,13 @@ import CryptoKit
   let url=URL(string:"https://github.com/samihsoylu/side-tray/releases/download/v0.2.1/SideTray.zip")!
   let candidate=try UpdateCandidate(build:"6",version:"0.2.1",url:url,length:UInt64(data.count),signature:signature,repository:"samihsoylu/side-tray")
   try candidate.verify(data,publicKey:publicKey)
+  let disk=try UpdateCandidate(build:"11",version:"0.2.6",url:url.deletingPathExtension().appendingPathExtension("dmg"),length:UInt64(data.count),signature:signature,repository:"samihsoylu/side-tray")
+  try disk.verify(data,publicKey:publicKey)
+  expect(disk.cacheFilename == "update.dmg" && disk.contentType == "application/x-apple-diskimage","DMG cache type mismatch")
+  expect(candidate.cacheFilename == "update.zip","Legacy ZIP cache compatibility lost")
+  for ext in ["pkg","exe","html"] {
+   do { _=try UpdateCandidate(build:"11",version:"0.2.6",url:url.deletingPathExtension().appendingPathExtension(ext),length:UInt64(data.count),signature:signature,repository:"samihsoylu/side-tray"); expect(false,"Accepted unsupported format") } catch {}
+  }
   for bytes in [Data("tampered update bytes".utf8),Data(data.dropLast()),data+Data([0])] {
    do { try candidate.verify(bytes,publicKey:publicKey); expect(false,"Accepted tampered archive") } catch {}
   }

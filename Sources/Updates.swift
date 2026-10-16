@@ -89,11 +89,11 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
  private func restoreDownload() {
   do {
    let manifest=cacheDirectory.appendingPathComponent("download.json")
-   let archive=cacheDirectory.appendingPathComponent("update.zip")
    let metadataSize=try FileManager.default.attributesOfItem(atPath:manifest.path)[.size] as? NSNumber
    guard (metadataSize?.intValue ?? 0) < 16384 else { throw UpdateFailure.invalidRelease }
    let saved=try JSONDecoder().decode(UpdateCandidate.self,from:Data(contentsOf:manifest))
    let restored=try UpdateCandidate(build:saved.build,version:saved.version,url:saved.url,length:saved.length,signature:saved.signature.base64EncodedString(),repository:Self.repository)
+   let archive=cacheDirectory.appendingPathComponent(restored.cacheFilename)
    let current=Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "0"
    let size=try FileManager.default.attributesOfItem(atPath:archive.path)[.size] as? NSNumber
    guard restored.build.compare(current,options:.numeric) == .orderedDescending,size?.uint64Value == restored.length else { throw UpdateFailure.invalidRelease }
@@ -223,10 +223,10 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
    let data=try Data(contentsOf:location,options:.mappedIfSafe)
    try next.verify(data,publicKey:Self.publicKey)
    try FileManager.default.createDirectory(at:cacheDirectory,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
-   let archive=cacheDirectory.appendingPathComponent("update.zip")
+   let archive=cacheDirectory.appendingPathComponent(next.cacheFilename)
    try data.write(to:archive,options:.atomic)
    try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:archive.path)
-   if let response=HTTPURLResponse(url:next.url,statusCode:200,httpVersion:"HTTP/1.1",headerFields:["Content-Type":"application/zip","Cache-Control":"max-age=86400"]) {
+   if let response=HTTPURLResponse(url:next.url,statusCode:200,httpVersion:"HTTP/1.1",headerFields:["Content-Type":next.contentType,"Cache-Control":"max-age=86400"]) {
     URLCache.shared.storeCachedResponse(CachedURLResponse(response:response,data:data),for:URLRequest(url:next.url))
    }
    let manifest=cacheDirectory.appendingPathComponent("download.json")

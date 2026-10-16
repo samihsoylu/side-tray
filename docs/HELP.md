@@ -1,5 +1,18 @@
 # SideTray help
 
+## macOS says “SideTray” Not Opened
+
+This beta is not yet Apple Developer ID signed or notarized. For the warning that Apple could not verify the app is free of malware:
+
+1. Get the DMG from the [official release page](https://github.com/samihsoylu/side-tray/releases), open it, and drag SideTray to Applications. Open that installed copy.
+2. Choose **Done** in the warning.
+3. Open **System Settings → Privacy & Security**, scroll to Security, and find SideTray’s blocked-app message. Choose **Open**, then **Open Anyway**, or **Open Anyway** directly if shown.
+4. Authenticate locally and confirm **Open** if prompted. Open SideTray from Applications.
+
+The exception is offered for about an hour after an attempted launch; try opening the installed copy again if it has disappeared. These steps follow [Apple’s macOS 27 instructions](https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27). They apply to the unverified-app warning, not a report of known malware or a damaged app. Do not disable Gatekeeper or strip quarantine attributes.
+
+After launch, SideTray’s Device Control and Full Disk Access setup is a separate step. The DMG also includes **Install and Open.txt** with these instructions.
+
 ## An update asks for permissions again
 
 Current beta builds are ad-hoc signed. Replacing the app can change the identity macOS associates with a previous permission grant, even when its switch still looks enabled.
@@ -24,7 +37,7 @@ During an update, a failed restoration cancels quitting; the updater must wait u
 
 ## Update Ready opens Permissions instead
 
-Versions 0.2.3 and 0.2.4 can redirect the update page while access is missing. Version 0.2.5 fixes this. To get past the older version, either restore its permissions once and use the updater, or quit SideTray normally and replace the app in Applications with the new release ZIP’s SideTray.app. Keep your saved settings and recovery files.
+Versions 0.2.3 and 0.2.4 can redirect the update page while access is missing. Version 0.2.5 fixes this. To get past the older version, either restore its permissions once and use the updater, or quit SideTray normally and drag SideTray from the current release DMG to Applications, choosing Replace. Keep your saved settings and recovery files.
 
 ## An update will not download
 

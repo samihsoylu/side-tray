@@ -7,11 +7,13 @@ import functools, hashlib, json, plistlib, shutil, subprocess, threading, time
 import xml.etree.ElementTree as ET
 
 root = Path('build/update-integration').resolve()
-app = root / 'installed/SideTray Update Test.app'
+app = Path.home() / 'Library/Caches/io.sidetray.test.updater/Installed/SideTray Update Test.app'
 cache = Path.home() / 'Library/Caches/io.sidetray.test.updater'
 marker = cache / 'relaunched-build.txt'
 feed = root / 'release/appcast.xml'
 original = feed.read_bytes()
+archive = root / 'release' / Path(urlsplit(ET.fromstring(original).find('./channel/item/enclosure').attrib['url']).path).name
+cache_archive = cache / ('Updates/update' + archive.suffix)
 ns = 'http://www.andymatuschak.org/xml-namespaces/sparkle'
 signer = str(Path('build/dependencies/Sparkle-2.10.0/bin/sign_update').resolve())
 # A valid signed older feed, not an unsigned/tampered shortcut around validation.
@@ -65,7 +67,7 @@ try:
         check_requests()
         assert plistlib.loads((app/'Contents/Info.plist').read_bytes())['CFBundleVersion'] == '1'
         assert json.loads((cache/'Updates/download.json').read_text())['build'] == '2'
-        assert hashlib.sha256((cache/'Updates/update.zip').read_bytes()).digest() == hashlib.sha256((root/'release/UpdateTest.zip').read_bytes()).digest()
+        assert hashlib.sha256(cache_archive.read_bytes()).digest() == hashlib.sha256(archive.read_bytes()).digest()
         print('PASS: persistent signed conflict retries once, keeps the verified download and leaves build 1 installed', flush=True)
     reset()
     responses[:] = [original, stale, original]
@@ -75,7 +77,8 @@ try:
     deadline = time.monotonic() + 20
     while not marker.exists() and time.monotonic() < deadline:
         time.sleep(0.2)
-    assert marker.read_text() == '2', 'Updated fixture did not relaunch'
+    assert marker.exists(), 'Updated fixture did not relaunch\n' + result.stdout + result.stderr
+    assert marker.read_text() == '2', 'Wrong relaunched build'
     assert plistlib.loads((app/'Contents/Info.plist').read_bytes())['CFBundleVersion'] == '2'
     check_requests()
     print('PASS: one stale response recovers with a fresh request, installs the approved build and relaunches build 2', flush=True)

@@ -1,0 +1,42 @@
+SIDETRAY — INSTALL AND OPEN
+macOS 27 · Apple Silicon and Intel
+
+1. Quit any running copy of SideTray normally.
+2. Drag SideTray onto the Applications folder in this window.
+   If replacing an older copy, choose Replace. Your saved choices are kept.
+3. Open SideTray from Applications, then eject this disk image.
+
+IF MACOS SAYS “SIDETRAY” NOT OPENED
+
+This beta is not yet Apple Developer ID signed or notarized. macOS may say
+Apple could not verify that SideTray is free of malware.
+
+Only continue for a copy obtained from the official release page:
+https://github.com/samihsoylu/side-tray/releases
+
+1. Choose Done in the warning, rather than Move to Bin.
+2. Open System Settings → Privacy & Security and scroll to Security.
+3. Find the message about SideTray. Choose Open, then Open Anyway, or
+   Open Anyway directly, depending on the controls macOS shows.
+4. Approve locally with Touch ID or your login password, and confirm Open
+   if prompted. Then open SideTray from Applications.
+
+If the exception is no longer shown, try opening SideTray from Applications
+again, then return to Privacy & Security. Do not disable Gatekeeper or remove
+quarantine attributes. These instructions apply to the unverified-developer
+warning, not a warning that the app is damaged or contains known malware.
+
+Apple's instructions:
+https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27
+
+SIDETRAY SETUP
+
+Once open, use Request Access for Device Control. Full Disk Access must be
+enabled separately in System Settings. Choose Quit & Reopen if macOS asks.
+Then select which apps stay visible and click Start SideTray.
+
+Updates may need renewed permission approval while Apple signing is deferred.
+SideTray guides you through missing access and keeps your saved app choices.
+
+Help: https://github.com/samihsoylu/side-tray/blob/main/docs/HELP.md
+License: GNU GPL v3.0; included inside SideTray.app.
