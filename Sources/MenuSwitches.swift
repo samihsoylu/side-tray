@@ -86,6 +86,16 @@ enum MenuSwitchCodec {
  static func restoration(original:[String:Bool],written:[String:Bool],current:[String:Bool]) -> [String:Bool] {
   original.filter { id,_ in current[id] != nil && current[id] == written[id] }
  }
+ // A helper can own the AX button while its enclosing app owns the native switch.
+ // Exact records win. Shared owners remain visible if any selected helper needs them.
+ static func visibilityChanges(states:[String:Bool],visible:Set<String>,known:Set<String>,aliases:[String:[String]]) -> [String:Bool] {
+  var changes=[String:Bool]()
+  for id in known.union(visible) where !id.hasPrefix("com.apple.") {
+   guard let owner=([id]+(aliases[id] ?? [])).first(where:{ states[$0] != nil && !$0.hasPrefix("com.apple.") }) else { continue }
+   changes[owner]=(changes[owner] ?? false) || visible.contains(id)
+  }
+  return changes
+ }
  static func updatedDomain(_ domain:Data,changes:[String:Bool]) throws -> Data {
   guard var outer=try PropertyListSerialization.propertyList(from:domain,format:nil) as? [String:Any] else { throw MenuSwitchError.unexpectedFormat }
   outer["trackedApplications"]=try updatedValue(domain,changes:changes)
@@ -163,10 +173,9 @@ final class MenuSwitches {
   } catch { return MenuDataAccess.failure(error) }
  }
  var hasRecoveryRecord:Bool { FileManager.default.fileExists(atPath:journal.path) }
- func applyVisible(_ visible:Set<String>,known:Set<String>) throws {
+ func applyVisible(_ visible:Set<String>,known:Set<String>,aliases:[String:[String]]=[:]) throws {
   let states=try MenuSwitchCodec.states(read())
-  let apps=Set(states.keys).intersection(known.union(visible)).filter { !$0.hasPrefix("com.apple.") }
-  try apply(Dictionary(uniqueKeysWithValues:apps.map { ($0,visible.contains($0)) }))
+  try apply(MenuSwitchCodec.visibilityChanges(states:states,visible:visible,known:known,aliases:aliases))
  }
  private func write(_ changes:[String:Bool],basedOn snapshot:Data) throws {
   let data=try MenuSwitchCodec.updatedDomain(snapshot,changes:changes)

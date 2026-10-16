@@ -13,3 +13,18 @@ func menuSigningIdentifier(_ app:NSRunningApplication) -> String? {
  guard SecCodeCopySigningInformation(staticCode,SecCSFlags(rawValue:kSecCSSigningInformation),&information) == errSecSuccess else { return nil }
  return (information as? [String:Any])?[kSecCodeInfoIdentifier as String] as? String
 }
+
+/// Resolve only real enclosing app bundles, never infer ownership from ID prefixes.
+func menuPreferenceAliases(_ apps:[NSRunningApplication]) -> [String:[String]] {
+ var aliases=[String:[String]]()
+ for app in apps {
+  guard let id=app.bundleIdentifier,let url=app.bundleURL else { continue }
+  var parents=[String](), cursor=url.deletingLastPathComponent()
+  while cursor.path != "/" {
+   if cursor.pathExtension == "app",let parent=Bundle(url:cursor)?.bundleIdentifier,parent != id { parents.append(parent) }
+   cursor=cursor.deletingLastPathComponent()
+  }
+  if !parents.isEmpty { aliases[id]=parents }
+ }
+ return aliases
+}

@@ -73,6 +73,17 @@ final class FakeDomain {
   try rejects { try unsupported.apply(["app.a":false]) }
   try check(fake.writes == oldWrites,"No unsupported OS writes")
 
+  let helperDomain=try FakeDomain(["app.parent":true,"unrelated":true])
+  let helperStore=store(helperDomain,"helper")
+  let aliases=["app.parent.helper":["app.parent"]]
+  try helperStore.applyVisible([],known:["app.parent.helper"],aliases:aliases)
+  try check(try helperDomain.states()["app.parent"] == false,"Hide the helper through the registered parent")
+  try helperStore.applyVisible(["app.parent.helper"],known:["app.parent.helper"],aliases:aliases)
+  try check(try helperDomain.states()["app.parent"] == true,"Reveal helper through the same parent")
+  try helperStore.applyVisible([],known:["app.parent.helper"],aliases:aliases)
+  try helperStore.restore()
+  try check(try helperDomain.states() == ["app.parent":true,"unrelated":true],"Restore parent and preserve unrelated records")
+
   let interrupted=store(fake,"interrupted")
   fake.failAfterWrite=true
   try rejects { try interrupted.apply(["app.a":false]) }

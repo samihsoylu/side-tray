@@ -92,6 +92,25 @@ final class UXFixture:NSObject {
     return field.stringValue
    }.joined(separator:"\n")
   }
+  owner.fixtureInstalled=true; owner.fixtureControlAccess=true; owner.fixtureHelperRunning=true
+  owner.setupPending=false; owner.menuDataReadable=true; owner.menuDataAccess = .available; owner.startupRecoveryComplete=true
+  var restorations=0
+  owner.fixtureRestoreVisibility={ restorations += 1 }
+  owner.pauseAfterVisibilityFailure()
+  try check(restorations == 1 && !owner.canManageVisibility,"Failed visibility must restore once and disable automatic management")
+  var rejected=0
+  for _ in 0..<20 { owner.applyVisibility { ok in if !ok { rejected += 1 } } }
+  owner.updatePermissionRecovery(); owner.refreshSettingsUI()
+  try check(rejected == 20 && restorations == 1 && owner.visibilityPaused,"Queued/discovery attempts must not restart a failed layout")
+  try check(visibleText().contains("Menu bar management paused") && !visibleText().contains("SideTray is ready"),"Paused UI must not claim readiness or missing permission")
+  owner.visibilityPaused=false; owner.fixtureControlAccess=false
+  owner.pauseAfterVisibilityFailure()
+  try check(!owner.visibilityPaused && restorations == 2,"Permission loss must retain its own automatic recovery")
+  owner.fixtureControlAccess=true; owner.suspended=true
+  owner.pauseAfterVisibilityFailure()
+  try check(!owner.visibilityPaused && restorations == 3,"Sleep must not latch a visibility failure")
+  owner.suspended=false; owner.fixtureRestoreVisibility=nil; owner.menuDataReadable=false
+  print("PASS: failed visibility restores once, blocks repeated attempts and shows accurate paused status")
   owner.fixtureInstalled=true; owner.fixtureControlAccess=false
   owner.setupPending=true; owner.menuDataAccess = .permissionRequired
   owner.refreshSettingsUI()

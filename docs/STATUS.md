@@ -1,5 +1,12 @@
 # Beta status
 
+## 0.2.8 (build 13)
+
+- Resolves helper-owned menu icons to their enclosing app’s registered visibility setting, including Gemini’s launcher. Exact helper records still take precedence; unrelated settings remain unchanged.
+- Stops automatic placement attempts after a verified update failure exhausts the existing bounded recovery. Restores original icon settings and shows a paused state; Check Permissions retries the saved layout. Sleep and lost permissions retain their own recovery paths.
+
+The reported failure was observed with working permissions, Gemini’s launcher owning its AX icon, and the main Gemini app owning its native setting. The installed helper-to-parent mapping was checked read-only. Regression checks cover helper hide/reveal/restore, exact-record priority, shared owners, unrelated records, and repeated placement attempts after failure. Live behavior of the updated production build remains for the user’s update test.
+
 ## 0.2.7 (build 12)
 
 - Adds a graphical drag-to-Applications cue, larger installer icons and concise first-install instructions.

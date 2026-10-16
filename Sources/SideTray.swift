@@ -115,6 +115,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  var menuDataAccess:MenuDataAccess = .checking
  var startupRecoveryComplete=false
  var recoveryBlocked=false
+ var visibilityPaused=false
  var terminating=false
  var recoveryWatcher:Process?
  var lastMenuBarRefresh:Date?
@@ -133,6 +134,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  #if SIDETRAY_UX_FIXTURE
  // Test snapshots never grant OS access or run native visibility operations.
+ var fixtureRestoreVisibility:(()->Void)?
  var fixtureRequestControl:(()->Void)?
  var fixtureOpenSettings:((String)->Void)?
  var fixtureCheckPermissions:(()->Void)?
@@ -164,7 +166,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   return recoveryWatcher?.isRunning == true
  }
  var accessReady:Bool { controlAccessGranted && isInstalled && menuDataReadable && startupRecoveryComplete && !recoveryBlocked && recoveryHelperRunning }
- var canManageVisibility:Bool { accessReady && !setupPending && !permissionRecovery.isActive }
+ var canManageVisibility:Bool { accessReady && !visibilityPaused && !setupPending && !permissionRecovery.isActive }
  func applicationDidFinishLaunching(_ notification: Notification) {
   if let url=Bundle.main.url(forResource:"SideTray",withExtension:"icns"),let icon=NSImage(contentsOf:url) {
    NSApp.applicationIconImage=icon
@@ -440,7 +442,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  private func applyVisibilityNow(reveal:String?,completion:@escaping(Bool)->Void) {
-  guard !setupPending,permissionRecovery.state != .needsAttention else { completion(false); return }
+  guard !visibilityPaused,!setupPending,permissionRecovery.state != .needsAttention else { completion(false); return }
   guard startupRecoveryComplete,!recoveryBlocked else {
    visibilityMessage="Recovery must finish before SideTray can hide icons. Open Permissions and use Check Permissions."
    completion(false); return
@@ -465,12 +467,13 @@ final class Controller: NSObject, NSApplicationDelegate {
    // Remember an app before hiding its only discoverable native button.
    rememberMenuApps(slots)
    let known=Set(placement.names.keys).union(slots.map(\.bundle))
+   let aliases=menuPreferenceAliases(NSWorkspace.shared.runningApplications)
    visibilityQueue.async {
     do {
-     try self.menuSwitches.applyVisible(visible,known:known)
+     try self.menuSwitches.applyVisible(visible,known:known,aliases:aliases)
      DispatchQueue.main.async {
       self.verifyMenuBarUpdate(visible:visible,known:known) { ok in
-       if !ok { self.restoreVisibility(); self.visibilityMessage="The menu bar did not update. Your original settings are being restored; try again when no app menu is open." }
+       if !ok { self.pauseAfterVisibilityFailure() }
        completion(ok)
       }
      }
@@ -527,7 +530,18 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
   poll()
  }
+ func pauseAfterVisibilityFailure() {
+  // Sleep and permission loss are handled by their own automatic recovery.
+  guard !suspended,controlAccessGranted else { restoreVisibility(); return }
+  visibilityPaused=true // Set before restoration or queued transactions can run.
+  restoreVisibility()
+  visibilityMessage="SideTray paused after the menu bar did not update. Original icon settings are being restored. Use Check Permissions to retry."
+  refreshSettingsUI()
+ }
  func restoreVisibility() {
+  #if SIDETRAY_UX_FIXTURE
+  if let restore=fixtureRestoreVisibility { restore(); return }
+  #endif
   STRestoreVisibility()
   guard useMenuSwitches else { return }
   // Serialize recovery after previously queued writes. The suspended/trust
@@ -568,7 +582,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  // Returns true while access recovery owns resuming the saved layout.
  @discardableResult func updatePermissionRecovery() -> Bool {
   let action=permissionRecovery.evaluate(setupPending:setupPending,installed:isInstalled,
-   controlGranted:controlAccessGranted,dataPermissionMissing:menuDataAccess == .permissionRequired,ready:accessReady)
+   controlGranted:controlAccessGranted,dataPermissionMissing:menuDataAccess == .permissionRequired,ready:accessReady && !visibilityPaused)
   switch action {
   case .present:
    showSettings(destination:"permissions")
@@ -599,7 +613,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  @objc func checkMenuDataAccess() {
   guard !checkingPermissions,!terminating else { return }; checkingPermissions=true
-  let recover = !startupRecoveryComplete || recoveryBlocked
+  let recover = !startupRecoveryComplete || recoveryBlocked || visibilityPaused
   visibilityQueue.async {
    let access=self.menuSwitches.accessStatus()
    let available=access == .available
@@ -643,6 +657,7 @@ final class Controller: NSObject, NSApplicationDelegate {
     }
     UserDefaults.standard.set(true,forKey:"useMenuSwitches")
     let requested=self.permissionCheckRequested; self.permissionCheckRequested=false
+    if requested { self.visibilityPaused=false }
     if self.setupPending { self.visibilityMessage=""; self.refreshSettingsUI(); return }
     if self.updatePermissionRecovery() { self.refreshSettingsUI(); return }
     if changed || requested {
@@ -673,7 +688,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  @objc func changeVisibility(_ sender:NSButton) {
-  guard accessReady,!placementBusy,!openingMenu,listBundles.indices.contains(sender.tag) else { refreshSettingsUI(); return }
+  guard accessReady,!visibilityPaused,!placementBusy,!openingMenu,listBundles.indices.contains(sender.tag) else { refreshSettingsUI(); return }
   let bundle=listBundles[sender.tag]
   placementBusy=true
   let previous=placement.visible

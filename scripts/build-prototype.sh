@@ -32,11 +32,11 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 <key>SideTrayAuthorEmail</key><string>mail@samihsoylu.nl</string>
 <key>CFBundleExecutable</key><string>SideTray</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>12</string>
+<key>CFBundleVersion</key><string>13</string>
 <key>SideTrayReleaseChannel</key><string>Beta</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
-<key>CFBundleShortVersionString</key><string>0.2.7</string>
+<key>CFBundleShortVersionString</key><string>0.2.8</string>
 <key>SUFeedURL</key><string>https://raw.githubusercontent.com/samihsoylu/side-tray/main/appcast-dmg.xml</string>
 <key>SUPublicEDKey</key><string>r7UuuKkGu2L7nTKNXnACxbidTszFTK5hkGmAygh0tS0=</string>
 <key>SUEnableAutomaticChecks</key><false/>
