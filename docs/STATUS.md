@@ -1,5 +1,14 @@
 # Beta status
 
+## 0.2.7 (build 12)
+
+- Adds a graphical drag-to-Applications cue, larger installer icons and concise first-install instructions.
+- Starts the native Device Control request automatically during visible setup, then opens Full Disk Access once Device Control is approved. Both missing-permission buttons say **Request Access…**.
+- Provides a draggable copy of the current app’s icon in setup, avoiding a Finder search when SideTray is missing from Full Disk Access. macOS still requires the user to approve access.
+- Keeps automatic guidance out of the Updates page and does not reopen dismissed setup windows. Existing permission and icon-restoration safeguards remain.
+
+The controller fixture verifies sequencing, one request per step, working-grant preservation, and update/dismissal guards. Visual review confirmed matching button labels and the mounted installer arrow. The UI tool initiated the app-icon drag but did not complete a drop into the isolated receiver; actual Full Disk Access drop and the new automatic OS approval sequence remain unverified end to end. macOS does not provide a supported automatic Full Disk Access grant API; this release does not claim automatic approval or reliable grant continuity between ad-hoc builds.
+
 ## 0.2.6 (build 11)
 
 Releases now use a DMG containing SideTray, an Applications shortcut and first-opening instructions. The updater accepts signed DMGs and retains ZIP cache compatibility. Versions before 0.2.6 require one manual DMG install; their existing ZIP feed remains unchanged. Future versions use the separate DMG feed.

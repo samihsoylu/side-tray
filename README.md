@@ -19,7 +19,7 @@
 ## Get started
 
 1. Download and open the **DMG**, then drag **SideTray** onto **Applications**.
-2. Open SideTray and follow setup to grant its permissions in **System Settings → Privacy & Security**.
+2. Open SideTray and follow its permission prompts in **System Settings → Privacy & Security**.
 3. Select the apps you want to keep visible, then click **Start SideTray**. Unchecked and new apps go into the tray.
 
 If macOS shows **“SideTray” Not Opened**, choose **Done**, then open **System Settings → Privacy & Security**. Under Security, choose **Open / Open Anyway** for SideTray and approve the prompt. Only do this for the [official download](https://github.com/samihsoylu/side-tray/releases). [First-launch help](docs/HELP.md#macos-says-sidetray-not-opened)
@@ -34,7 +34,7 @@ SideTray checks GitHub daily and downloads verified updates. Click **Install and
 
 Versions before 0.2.6 need one manual DMG installation; later versions update through the app.
 
-Apple signing and notarization are pending. macOS may require **Open Anyway** in Privacy & Security on first launch, or renewed permissions after an update. [Permission help](docs/HELP.md)
+macOS may require **Open Anyway** in Privacy & Security on first launch, or renewed permissions after an update. [Permission help](docs/HELP.md)
 
 SideTray uses internal macOS 27 settings and should not run alongside another menu bar manager. Testing on other Macs is ongoing. [Beta status](docs/STATUS.md)
 

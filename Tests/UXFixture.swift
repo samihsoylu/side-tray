@@ -7,22 +7,49 @@ private func check(_ condition: @autoclosure () -> Bool, _ message: String = "Ch
  if !condition() { throw FixtureFailure(message: "line \(line): \(message)") }
 }
 
+private final class PermissionDragTarget:NSView {
+ let result=NSTextField(labelWithString:"Drop the app icon here")
+ override init(frame:NSRect) {
+  super.init(frame:frame); registerForDraggedTypes([.fileURL])
+  wantsLayer=true; layer?.backgroundColor=NSColor.controlBackgroundColor.cgColor
+  result.frame=NSRect(x:12,y:45,width:280,height:24); addSubview(result)
+ }
+ required init?(coder:NSCoder) { fatalError("init(coder:) is unused") }
+ override func draggingEntered(_ sender:NSDraggingInfo)->NSDragOperation { .copy }
+ override func performDragOperation(_ sender:NSDraggingInfo)->Bool {
+  let urls=sender.draggingPasteboard.readObjects(forClasses:[NSURL.self],options:[.urlReadingFileURLsOnly:true]) as? [URL]
+  let valid=urls == [Bundle.main.bundleURL]
+  result.stringValue=valid ? "PASS: exact current app URL received" : "FAIL: incorrect drag payload"
+  return valid
+ }
+}
+
 // Isolated bundle/preferences; never starts Controller's lifecycle, status item,
 // permission requests, recovery watcher or native visibility mutations.
 final class UXFixture:NSObject {
  let owner=Controller()
  var controls:NSWindow!
+ var dragWindow:NSWindow?
  override init() {
   super.init()
   owner.setupPending=true
   owner.panel=TrayPanel(contentRect:NSRect(x:850,y:650,width:330,height:33),styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false)
-  controls=NSWindow(contentRect:NSRect(x:100,y:200,width:240,height:220),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+  controls=NSWindow(contentRect:NSRect(x:100,y:200,width:240,height:260),styleMask:[.titled,.closable],backing:.buffered,defer:false)
   controls.title="SideTray UX Test"
   let stack=NSStackView(); stack.orientation = .vertical; stack.spacing=12
-  for (title,action) in [("Show Setup",#selector(setup)),("Show Access Recovery",#selector(accessRecovery)),("Show Failure",#selector(failure)),("Show Empty State",#selector(empty)),("Show Overflow",#selector(overflow)),("Quit Fixture",#selector(quit))] {
+  for (title,action) in [("Show Setup",#selector(setup)),("Show Access Recovery",#selector(accessRecovery)),("Show Failure",#selector(failure)),("Show Empty State",#selector(empty)),("Show Overflow",#selector(overflow)),("Test Permission Drag",#selector(testPermissionDrag)),("Quit Fixture",#selector(quit))] {
    stack.addArrangedSubview(NSButton(title:title,target:self,action:action))
   }
-  stack.frame=NSRect(x:10,y:10,width:220,height:200); controls.contentView=stack
+  stack.frame=NSRect(x:10,y:10,width:220,height:240); controls.contentView=stack
+ }
+ @objc func testPermissionDrag() {
+  let window=NSWindow(contentRect:NSRect(x:100,y:200,width:500,height:180),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+  window.title="SideTray Permission Drag Test"; window.isReleasedWhenClosed=false
+  let icon=PermissionAppIcon(frame:NSRect(x:30,y:60,width:64,height:64))
+  icon.image=NSWorkspace.shared.icon(forFile:Bundle.main.bundlePath); icon.imageScaling = .scaleProportionallyDown
+  window.contentView?.addSubview(icon)
+  window.contentView?.addSubview(PermissionDragTarget(frame:NSRect(x:155,y:30,width:320,height:120)))
+  dragWindow=window; window.makeKeyAndOrderFront(nil)
  }
  @objc func setup() { owner.setupPending=true; owner.permissionRecovery=PermissionRecovery(); owner.fixtureInstalled=true; owner.fixtureControlAccess=false; owner.controlRequestSent=false; owner.menuDataAccess = .permissionRequired; owner.showSettings(destination:"permissions") }
  @objc func accessRecovery() {
@@ -69,6 +96,8 @@ final class UXFixture:NSObject {
   owner.setupPending=true; owner.menuDataAccess = .permissionRequired
   owner.refreshSettingsUI()
   try check(visibleText().contains("Set Up SideTray") && !visibleText().contains("again"),"First setup must never imply previous approval")
+  let accessButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Request Access…" }
+  try check(accessButtons.count == 2,"Both missing permissions must use Request Access")
   var requests=0; var openedPanes:[String]=[]
   owner.fixtureRequestControl={ requests += 1 }
   owner.fixtureOpenSettings={ openedPanes.append($0) }
@@ -81,6 +110,28 @@ final class UXFixture:NSObject {
   try check(requests == 1,"Working grants must not request again")
   owner.openMenuDataPermissions()
   try check(openedPanes.last == "Privacy_AllFiles")
+  requests=0; openedPanes=[]; owner.controlRequestSent=false; owner.dataSetupOpened=false
+  owner.fixtureControlAccess=false; owner.showSettings(destination:"permissions")
+  owner.advancePermissionSetup(); owner.advancePermissionSetup()
+  try check(requests == 1 && openedPanes.isEmpty,"Setup must request Device Control automatically once, without racing Settings")
+  owner.fixtureControlAccess=true
+  owner.advancePermissionSetup(); owner.advancePermissionSetup()
+  try check(openedPanes == ["Privacy_AllFiles"],"Advance to Full Disk Access once after control approval")
+  owner.dataSetupOpened=false; owner.showSettings(destination:"general")
+  owner.advancePermissionSetup()
+  try check(openedPanes.count == 1,"Never steal focus from Updates")
+  owner.showSettings(destination:"permissions"); owner.settings?.orderOut(nil)
+  owner.advancePermissionSetup()
+  try check(openedPanes.count == 1,"Never reopen Settings after setup is dismissed")
+  owner.fixtureInstalled=false; owner.showSettings(destination:"permissions")
+  owner.advancePermissionSetup()
+  try check(openedPanes.count == 1,"Do not request access for an uninstalled copy")
+  owner.fixtureInstalled=true; owner.menuDataAccess = .available; owner.menuDataReadable=true
+  owner.advancePermissionSetup()
+  try check(openedPanes.count == 1,"Do not request working Full Disk Access")
+  let dragIcon=views(owner.settings!.contentView!).compactMap { $0 as? PermissionAppIcon }.first
+  try check(dragIcon?.appURL == Bundle.main.bundleURL,"Drag must identify the current app, not another copy")
+  print("PASS: automatic sequential permission setup, no repeated prompts, update/dismissal guards and exact dragged bundle")
   owner.fixtureRequestControl=nil; owner.fixtureOpenSettings=nil; owner.controlRequestSent=false
   // Production controller/presentation with injected access and resume results.
   // No permission requests, preferences writes, helpers or native icon changes.
@@ -102,13 +153,13 @@ final class UXFixture:NSObject {
   owner.showSettings(destination:"apps")
   try check(owner.settingsTab == "permissions","Placement stays gated during recovery")
 
-  let missingButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Open System Settings…" && !$0.isHiddenOrHasHiddenAncestor }
+  let missingButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Request Access…" && !$0.isHiddenOrHasHiddenAncestor }
   try check(missingButtons.count == 1,"Only the missing grant should offer an action")
   owner.menuDataAccess = .unavailable; owner.refreshSettingsUI()
   try check(visibleText().contains("Menu bar settings unavailable"))
   try check(!views(owner.settings!.contentView!).contains { view in
    guard let button=view as? NSButton else { return false }
-   return button.title == "Open System Settings…" && !button.isHiddenOrHasHiddenAncestor
+   return button.title == "Request Access…" && !button.isHiddenOrHasHiddenAncestor
   },"Unknown access failures must not request new grants")
   owner.menuDataAccess = .permissionRequired
   owner.settings?.orderOut(nil)
@@ -147,7 +198,7 @@ final class UXFixture:NSObject {
   owner.refreshSettingsUI()
   try check(visibleText().contains("Remove SideTray from the affected list"))
   owner.setupPending=true; owner.refreshSettingsUI()
-  try check(visibleText().contains("If it is missing from Full Disk Access, use +"))
+  try check(visibleText().contains("Missing from the list? Drag this icon into Full Disk Access"))
   owner.setupPending=false; owner.menuDataAccess = .unsupported; owner.refreshSettingsUI()
   try check(visibleText().contains("macOS not supported"))
   owner.recoveryBlocked=true; owner.refreshSettingsUI()

@@ -17,11 +17,13 @@ The packaging scripts reject an app whose bundled GPL or Sparkle license is miss
 
 The update script checks bundle identity, architectures and updater security settings, packages the app as `SideTray.app`, signs the archive and feed, limits the feed to macOS 27, and verifies the feed. It performs no upload. Do not edit a signed feed without signing it again.
 
+Release notes should use concise bullet points for changes and any required installation steps.
+
 ## Publish with one script
 
 After committing reviewed source/version changes, run `sh scripts/release.sh --publish path/to/release-notes.md`. It runs the checks, creates the DMG, publishes with `gh`, verifies public asset bytes, then commits/pushes the signed feed and verifies it. It refuses a dirty source tree and an existing output DMG. If you already made a local-only preview with `release.sh`, move that unpublished version directory aside before running the publishing command; do not remove or recreate a published artifact. If publication is interrupted, inspect the existing release before resuming; never overwrite published bytes.
 
-DMG layout generation uses `scripts/dmg-requirements.txt` in an isolated `.tooling/dmg` environment. The image contains SideTray.app, an Applications shortcut, and `docs/INSTALL.txt` as **Install and Open.txt**. The updater and manual download use the same signed DMG. No production installation is performed by the script.
+DMG layout generation uses `scripts/dmg-requirements.txt` in an isolated `.tooling/dmg` environment. The image contains an original graphical drag arrow, SideTray.app, an Applications shortcut, and `docs/INSTALL.txt` as **Install and Open.txt**. The updater and manual download use the same signed DMG. No production installation is performed by the script.
 
 Versions before 0.2.6 accept only ZIP URLs. Keep their legacy `appcast.xml` and existing assets intact; new releases use `appcast-dmg.xml`. Moving from a legacy build requires one manual DMG install. Do not add DMG items to the legacy feed.
 

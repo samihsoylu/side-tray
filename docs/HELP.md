@@ -2,7 +2,7 @@
 
 ## macOS says “SideTray” Not Opened
 
-This beta is not yet Apple Developer ID signed or notarized. For the warning that Apple could not verify the app is free of malware:
+If macOS blocks SideTray with the warning that Apple could not verify the app:
 
 1. Get the DMG from the [official release page](https://github.com/samihsoylu/side-tray/releases), open it, and drag SideTray to Applications. Open that installed copy.
 2. Choose **Done** in the warning.
@@ -11,7 +11,7 @@ This beta is not yet Apple Developer ID signed or notarized. For the warning tha
 
 The exception is offered for about an hour after an attempted launch; try opening the installed copy again if it has disappeared. These steps follow [Apple’s macOS 27 instructions](https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27). They apply to the unverified-app warning, not a report of known malware or a damaged app. Do not disable Gatekeeper or strip quarantine attributes.
 
-After launch, SideTray’s Device Control and Full Disk Access setup is a separate step. The DMG also includes **Install and Open.txt** with these instructions.
+After launch, SideTray requests Device Control automatically, then opens Full Disk Access. Enable SideTray in each list. If it is missing from Full Disk Access, drag the app icon from SideTray’s setup window into that list. macOS still requires your approval. The DMG also includes **Install and Open.txt** with these instructions.
 
 ## An update asks for permissions again
 

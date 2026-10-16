@@ -93,6 +93,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  var setupPending=SetupProgress.needsSetup()
  var permissionRecovery=PermissionRecovery()
  var controlRequestSent=false
+ var dataSetupOpened=false
  var settingsUI:SettingsUI?
  var checkingPermissions=false
  var permissionCheckRequested=false
@@ -551,7 +552,18 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  @objc func openMenuDataPermissions() {
+  dataSetupOpened=true
   openPrivacySettings("Privacy_AllFiles")
+ }
+ // Advance each visible setup step once, without pulling people away from Updates.
+ func advancePermissionSetup() {
+  guard isInstalled,settings?.isVisible == true,settingsTab == "permissions",
+        setupPending || permissionRecovery.isActive else { return }
+  if !controlAccessGranted {
+   if !controlRequestSent { openPermissions() }
+  } else if menuDataAccess == .permissionRequired && !dataSetupOpened {
+   openMenuDataPermissions()
+  }
  }
  // Returns true while access recovery owns resuming the saved layout.
  @discardableResult func updatePermissionRecovery() -> Bool {
@@ -809,6 +821,7 @@ final class Controller: NSObject, NSApplicationDelegate {
     } else { self.visibilityMessage=""; self.refreshSettingsUI() }
    }
    self.updatePermissionRecovery()
+   self.advancePermissionSetup()
    // Applications can create their status item long after their launch event.
    // Reconcile actual menu items, not all running apps or helper processes.
    if self.canManageVisibility,!self.suspended,!self.openingMenu,!self.placementBusy,
@@ -834,7 +847,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   guard isInstalled else { showSettings(destination:"permissions"); return }
   if controlAccessGranted || controlRequestSent { openPrivacySettings("Privacy_Accessibility"); return }
   controlRequestSent=true
-  // Ask the OS once after an explicit click. Do not race its asynchronous alert
+  // Ask the OS once during setup or on explicit retry. Do not race its asynchronous alert
   // by opening Settings too. A later click provides the Settings fallback.
   #if SIDETRAY_UX_FIXTURE
   if let request=fixtureRequestControl { request() }

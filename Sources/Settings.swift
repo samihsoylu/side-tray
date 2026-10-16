@@ -4,6 +4,18 @@ import ServiceManagement
 
 private final class AppListDocument:NSView { override var isFlipped:Bool { true } }
 
+// Supply the actual bundle URL; macOS retains approval and authentication.
+final class PermissionAppIcon:NSImageView,NSDraggingSource {
+ var appURL=Bundle.main.bundleURL
+ override func mouseDown(with event:NSEvent) { }
+ override func mouseDragged(with event:NSEvent) {
+  let item=NSDraggingItem(pasteboardWriter:appURL as NSURL)
+  item.setDraggingFrame(bounds,contents:image)
+  beginDraggingSession(with:[item],event:event,source:self)
+ }
+ func draggingSession(_ session:NSDraggingSession,sourceOperationMaskFor context:NSDraggingContext)->NSDragOperation { .copy }
+}
+
 private func label(_ text:String,heading:Bool=false) -> NSTextField {
  let field=NSTextField(wrappingLabelWithString:text)
  field.font = .systemFont(ofSize:heading ? 14 : 13,weight:heading ? .semibold : .regular)
@@ -70,6 +82,8 @@ final class SettingsUI:NSObject {
  private let setupTitle=label("",heading:true)
  private let setupDescription=label("")
  private let controlHelp=label("")
+ private let permissionApp=PermissionAppIcon()
+ private var permissionDragRow:NSStackView!
  private let revealApp=NSButton(title:"Show App in Finder",target:nil,action:nil)
  private let controlState=label("",heading:true)
  private let dataState=label("",heading:true)
@@ -136,10 +150,17 @@ final class SettingsUI:NSObject {
   controlOpen.target=owner; controlOpen.action=#selector(Controller.openPermissions)
   revealApp.target=owner; revealApp.action=#selector(Controller.showPermissionApp)
   dataOpen.target=owner; dataOpen.action=#selector(Controller.openMenuDataPermissions)
+  permissionApp.image=NSWorkspace.shared.icon(forFile:Bundle.main.bundlePath)
+  permissionApp.imageScaling = .scaleProportionallyDown
+  permissionApp.toolTip="Drag SideTray into the Full Disk Access list in System Settings."
+  permissionApp.setAccessibilityLabel("SideTray app — drag to Full Disk Access")
+  permissionApp.translatesAutoresizingMaskIntoConstraints=false
+  NSLayoutConstraint.activate([permissionApp.widthAnchor.constraint(equalToConstant:44),permissionApp.heightAnchor.constraint(equalToConstant:44)])
+  permissionDragRow=stack([permissionApp,label("Missing from the list? Drag this icon into Full Disk Access, then enable SideTray.")],horizontal:true,spacing:10)
   details.target=self; details.action=#selector(toggleDetails); details.bezelStyle = .disclosure; details.setAccessibilityLabel("Permission details")
   next.target=self; next.action=#selector(chooseApps)
   checkPermissions.target=owner; checkPermissions.action=#selector(Controller.recheckPermissions)
-  let permissions=column([setupTitle,setupDescription,stack([controlState,spacer(),controlOpen],horizontal:true),controlHelp,NSBox.separator(),stack([dataState,spacer(),dataOpen],horizontal:true),dataHelp,revealApp,accessHelp,details,permissionDetail,stack([next,spacer(),checkPermissions],horizontal:true)])
+  let permissions=column([setupTitle,setupDescription,stack([controlState,spacer(),controlOpen],horizontal:true),controlHelp,NSBox.separator(),stack([dataState,spacer(),dataOpen],horizontal:true),dataHelp,permissionDragRow,revealApp,accessHelp,details,permissionDetail,stack([next,spacer(),checkPermissions],horizontal:true)])
   let permissionScroll=NSScrollView(); permissionScroll.hasVerticalScroller=true; permissionScroll.autohidesScrollers=true; permissionScroll.drawsBackground=false
   let permissionDoc=AppListDocument(); permissionDoc.translatesAutoresizingMaskIntoConstraints=false
   permissionDoc.addSubview(permissions); permissionScroll.documentView=permissionDoc
@@ -217,12 +238,14 @@ final class SettingsUI:NSObject {
   if owner.menuDataAccess == .unsupported { dataState.stringValue="macOS not supported" }
   controlState.textColor=granted ? .secondaryLabelColor : .labelColor
   dataState.textColor=dataReady ? .secondaryLabelColor : .labelColor
-  controlOpen.title = granted || owner.controlRequestSent ? "Open System Settings…" : "Request Access…"
+  controlOpen.title = granted ? "Open System Settings…" : "Request Access…"
+  dataOpen.title = dataReady ? "Open System Settings…" : "Request Access…"
   controlOpen.isEnabled=owner.isInstalled
   controlHelp.stringValue = !granted && owner.controlRequestSent
-   ? "Approve SideTray in the macOS prompt. If no prompt appears, open System Settings and enable SideTray."
+   ? "Choose Open System Settings in the macOS prompt, then enable SideTray. If no prompt appears, use the button here."
    : "Allow SideTray to find and open your apps’ menu bar items."
-  revealApp.isHidden = dataReady || owner.menuDataAccess != .permissionRequired
+  permissionDragRow.isHidden = dataReady || owner.menuDataAccess != .permissionRequired
+  revealApp.isHidden = permissionDragRow.isHidden || details.state != .on
   controlOpen.isHidden=recovering ? granted : granted && details.state != .on
   dataOpen.isHidden=recovering ? owner.menuDataAccess != .permissionRequired : dataReady && details.state != .on
   dataHelp.stringValue=dataReady ? "Menu bar visibility settings are connected." : owner.menuSwitches.hasRecoveryRecord ? "Allow Full Disk Access, then use Quit & Reopen. SideTray needs this access to restore your hidden icons." : "Required to hide icons. macOS grants broader file access; SideTray uses it for menu bar settings."
@@ -233,7 +256,7 @@ final class SettingsUI:NSObject {
   if dataReady && !owner.recoveryHelperRunning { dataHelp.stringValue="Access is granted. The recovery helper is not running; use Check Permissions to retry." }
   accessHelp.isHidden = !needsPermission
   accessHelp.stringValue=owner.setupPending
-   ? "If it is missing from Full Disk Access, use + to add SideTray from Applications. Choose Quit & Reopen if macOS asks."
+   ? "Enable SideTray in each list and approve with Touch ID or your password if asked. Choose Quit & Reopen if macOS asks."
    : "Already enabled? An updated beta may need a new grant. Remove SideTray from the affected list with −, then use + to add it from Applications. Quit and reopen SideTray. Your app choices are kept."
   if !needsPermission && !owner.accessReady { setupDescription.stringValue="Your app choices are saved. Check the status below before changing permissions." }
   if recovering {
@@ -322,6 +345,9 @@ extension Controller {
   if settingsUI == nil { settingsUI=SettingsUI(owner:self); settings=settingsUI?.window }
   settingsUI?.select(destination ?? (permissionRecovery.isActive ? "permissions" : nil)); settingsUI?.update()
   settings?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps:true)
+  #if !SIDETRAY_UX_FIXTURE || SIDETRAY_PERMISSION_JOURNEY
+  DispatchQueue.main.async { [weak self] in self?.advancePermissionSetup() }
+  #endif
  }
  func refreshSettingsUI() { settingsUI?.update() }
  @objc func forgetApp(_ sender:NSButton) {

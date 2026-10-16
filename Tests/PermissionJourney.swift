@@ -28,6 +28,7 @@ final class PermissionJourney:NSObject {
     self.checking=false
     self.owner.menuDataAccess=result; self.owner.menuDataReadable=result == .available
     self.owner.refreshSettingsUI()
+    self.owner.advancePermissionSetup()
     self.owner.settings?.title="SideTray Permission Test — Set Up SideTray"
     self.owner.settingsUI?.nextForPermissionTestDisabled()
     let evidence=["controlGranted":self.owner.controlAccessGranted,"dataGranted":self.owner.menuDataReadable]

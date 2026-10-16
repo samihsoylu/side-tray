@@ -1,42 +1,23 @@
-SIDETRAY — INSTALL AND OPEN
-macOS 27 · Apple Silicon and Intel
+INSTALL SIDETRAY
 
-1. Quit any running copy of SideTray normally.
-2. Drag SideTray onto the Applications folder in this window.
-   If replacing an older copy, choose Replace. Your saved choices are kept.
-3. Open SideTray from Applications, then eject this disk image.
+Drag SideTray onto Applications, then open it from Applications.
 
 IF MACOS SAYS “SIDETRAY” NOT OPENED
 
-This beta is not yet Apple Developer ID signed or notarized. macOS may say
-Apple could not verify that SideTray is free of malware.
+SideTray is downloaded directly from GitHub. If macOS blocks it:
 
-Only continue for a copy obtained from the official release page:
-https://github.com/samihsoylu/side-tray/releases
-
-1. Choose Done in the warning, rather than Move to Bin.
+1. Choose Done in the warning.
 2. Open System Settings → Privacy & Security and scroll to Security.
-3. Find the message about SideTray. Choose Open, then Open Anyway, or
-   Open Anyway directly, depending on the controls macOS shows.
-4. Approve locally with Touch ID or your login password, and confirm Open
-   if prompted. Then open SideTray from Applications.
+3. Find SideTray and choose Open / Open Anyway.
+4. Confirm with Touch ID or your password, then open SideTray.
 
-If the exception is no longer shown, try opening SideTray from Applications
-again, then return to Privacy & Security. Do not disable Gatekeeper or remove
-quarantine attributes. These instructions apply to the unverified-developer
-warning, not a warning that the app is damaged or contains known malware.
+SET UP SIDETRAY
 
-Apple's instructions:
-https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27
+Follow the permission prompt and enable SideTray under Device Control.
+In Full Disk Access, enable SideTray too. If it is missing, drag the
+SideTray icon from its setup window into the Full Disk Access list.
+Choose Quit & Reopen if macOS asks.
 
-SIDETRAY SETUP
-
-Once open, use Request Access for Device Control. Full Disk Access must be
-enabled separately in System Settings. Choose Quit & Reopen if macOS asks.
-Then select which apps stay visible and click Start SideTray.
-
-Updates may need renewed permission approval while Apple signing is deferred.
-SideTray guides you through missing access and keeps your saved app choices.
+Select the apps you want to keep visible, then click Start SideTray.
 
 Help: https://github.com/samihsoylu/side-tray/blob/main/docs/HELP.md
-License: GNU GPL v3.0; included inside SideTray.app.
