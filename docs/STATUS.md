@@ -7,7 +7,7 @@
 - Provides a draggable copy of the current app’s icon in setup, avoiding a Finder search when SideTray is missing from Full Disk Access. macOS still requires the user to approve access.
 - Keeps automatic guidance out of the Updates page and does not reopen dismissed setup windows. Existing permission and icon-restoration safeguards remain.
 
-The controller fixture verifies sequencing, one request per step, working-grant preservation, and update/dismissal guards. Visual review confirmed matching button labels and the mounted installer arrow. The UI tool initiated the app-icon drag but did not complete a drop into the isolated receiver; actual Full Disk Access drop and the new automatic OS approval sequence remain unverified end to end. macOS does not provide a supported automatic Full Disk Access grant API; this release does not claim automatic approval or reliable grant continuity between ad-hoc builds.
+The controller fixture verifies sequencing, one request per step, working-grant preservation, and update/dismissal guards. Visual review confirmed matching button labels and the mounted installer arrow. A subsequent live test confirmed automatic Device Control registration, approval detection and progression to Full Disk Access. Adding the isolated test app through the OS picker succeeded, and both real grants survived an ordinary quit/relaunch. The setup-icon drag and a Finder comparison drag did not complete through the UI tool; drag approval remains unverified. Both temporary grants were removed afterward, and production SideTray remained ready. macOS does not provide a supported automatic Full Disk Access grant API; this release does not claim automatic approval or reliable grant continuity between ad-hoc builds.
 
 ## 0.2.6 (build 11)
 
