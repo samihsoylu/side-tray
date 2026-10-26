@@ -284,11 +284,16 @@ final class SettingsUI:NSObject {
    setupDescription.isHidden=false
    setupDescription.stringValue="Your permissions are working. SideTray stopped retrying to keep the menu bar stable. Use Check Permissions to try your saved layout again."
   }
+  if owner.wakeRecovery.isActive && !needsPermission {
+   setupTitle.stringValue="Restoring your menu bar…"
+   setupDescription.isHidden=false
+   setupDescription.stringValue="SideTray is waiting for macOS and retrying your saved layout. Your permissions are working."
+  }
   permissionDetail.isHidden=details.state != .on
-  next.isHidden = !owner.setupPending; next.isEnabled=owner.accessReady && !owner.visibilityPaused
+  next.isHidden = !owner.setupPending; next.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive
   setupHelp.isHidden = !owner.setupPending
-  appHelp.stringValue=owner.visibilityPaused ? "Menu bar management is paused. Use Check Permissions in the Permissions tab to retry." : owner.accessReady ? "Choose which apps stay in the menu bar. Everything else appears in SideTray." : "Finish the permissions in the Permissions tab to choose your apps."
-  start.isHidden = !owner.setupPending; start.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.placementBusy
+  appHelp.stringValue=owner.wakeRecovery.isActive ? "Restoring your saved menu bar layout after wake…" : owner.visibilityPaused ? "Menu bar management is paused. Use Check Permissions in the Permissions tab to retry." : owner.accessReady ? "Choose which apps stay in the menu bar. Everything else appears in SideTray." : "Finish the permissions in the Permissions tab to choose your apps."
+  start.isHidden = !owner.setupPending; start.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive && !owner.placementBusy
   refresh.isHidden=owner.setupPending; refresh.isEnabled = !owner.placementBusy
   checkPermissions.title=recovering ? "Check Again" : "Check Permissions"
   checkPermissions.isEnabled = !owner.checkingPermissions && owner.permissionRecovery.state != .resuming
@@ -317,7 +322,7 @@ final class SettingsUI:NSObject {
    let installed=NSWorkspace.shared.urlForApplication(withBundleIdentifier:bundle) != nil
    row.check.title=owner.placement.names[bundle] ?? bundle
    row.check.tag=index; row.check.state=owner.placement.visible.contains(bundle) ? .on : .off
-   row.check.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.placementBusy && !owner.openingMenu
+   row.check.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive && !owner.placementBusy && !owner.openingMenu
    row.state.stringValue=running ? "" : installed ? "Not running" : "Unavailable"
    row.forget.isHidden=running || installed; row.forget.isEnabled = !owner.placementBusy
   }

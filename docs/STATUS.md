@@ -1,11 +1,19 @@
 # Beta status
 
+## 0.2.9 (build 14)
+
+- Restores the saved layout after wake with at most three attempts, waiting 2 seconds initially, then 5 and 15 seconds after failed attempts. A successful attempt stops the sequence.
+- Rechecks access and restarts a stopped recovery helper before applying the layout. Busy or unavailable menu bars consume an attempt without forcing a write. Wake recovery does not restart the macOS menu-bar service.
+- Blocks competing automatic layout changes during recovery and retains the paused anti-flicker safeguard after exhaustion. Sleep, quit and manual retry invalidate pending attempts and callbacks. A later sleep/wake cycle gets a fresh bounded budget.
+
+Deterministic clock tests and the production-controller fixture cover delays, exhaustion, success, duplicate notifications/completions, competing updates, prior-pause recovery, stale queued work and cancellation. Real overnight sleep/wake on the updated app remains for daily-use testing; the installed app and its grants are left unchanged.
+
 ## 0.2.8 (build 13)
 
 - Resolves helper-owned menu icons to their enclosing app’s registered visibility setting, including Gemini’s launcher. Exact helper records still take precedence; unrelated settings remain unchanged.
 - Stops automatic placement attempts after a verified update failure exhausts the existing bounded recovery. Restores original icon settings and shows a paused state; Check Permissions retries the saved layout. Sleep and lost permissions retain their own recovery paths.
 
-The reported failure was observed with working permissions, Gemini’s launcher owning its AX icon, and the main Gemini app owning its native setting. The installed helper-to-parent mapping was checked read-only. Regression checks cover helper hide/reveal/restore, exact-record priority, shared owners, unrelated records, and repeated placement attempts after failure. Live behavior of the updated production build remains for the user’s update test. The universal build, nine pure suites, controller/Settings fixture and signed DMG/feed verification passed. Published 0.2.8; the public download and live update feed match the prepared signed artifacts. The installed app was left unchanged.
+The reported failure was observed with working permissions, Gemini’s launcher owning its AX icon, and the main Gemini app owning its native setting. The installed helper-to-parent mapping was checked read-only. Regression checks cover helper hide/reveal/restore, exact-record priority, shared owners, unrelated records, and repeated placement attempts after failure. The user subsequently reported the menu bar was stable after updating to 0.2.8. The universal build, nine pure suites, controller/Settings fixture and signed DMG/feed verification passed. Published 0.2.8; the public download and live update feed match the prepared signed artifacts. The installed app was left unchanged.
 
 ## 0.2.7 (build 12)
 

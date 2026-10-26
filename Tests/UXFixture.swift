@@ -111,6 +111,41 @@ final class UXFixture:NSObject {
   try check(!owner.visibilityPaused && restorations == 3,"Sleep must not latch a visibility failure")
   owner.suspended=false; owner.fixtureRestoreVisibility=nil; owner.menuDataReadable=false
   print("PASS: failed visibility restores once, blocks repeated attempts and shows accurate paused status")
+  // Drive real lifecycle handlers with a fake clock; no sleep or native writes.
+  var wakeTasks=[()->Void](), wakeDelays=[TimeInterval](), wakeAttempts=0
+  owner.wakeRecovery=WakeRecovery(schedule:{ delay,work in wakeDelays.append(delay); wakeTasks.append(work) })
+  owner.fixtureInstalled=true; owner.fixtureControlAccess=true; owner.fixtureHelperRunning=true
+  owner.menuDataReadable=true; owner.menuDataAccess = .available; owner.setupPending=false
+  owner.fixtureRestoreVisibility={ restorations += 1 }
+  owner.fixtureWakeAttempt={ _,done in wakeAttempts += 1; self.owner.pauseAfterVisibilityFailure(); done(false) }
+  owner.handleSleep(); owner.handleWake(); owner.handleWake()
+  try check(wakeTasks.count == 1 && wakeAttempts == 0 && !owner.canManageVisibility,"Wake must settle and coalesce duplicate notifications")
+  var ordinaryResult:Bool?
+  owner.applyVisibility { ordinaryResult=$0 }
+  try check(ordinaryResult == false,"App-change transactions must not bypass wake delays")
+  owner.refreshSettingsUI()
+  try check(visibleText().contains("Restoring your menu bar…"),"Wake UI must describe automatic recovery")
+  wakeTasks.removeFirst()(); wakeTasks.removeFirst()(); wakeTasks.removeFirst()()
+  try check(wakeAttempts == 3 && wakeTasks.isEmpty && owner.visibilityPaused && !owner.canManageVisibility,"Exhaustion must preserve the anti-flicker pause")
+  try check(wakeDelays == [2,5,15])
+  owner.fixtureWakeAttempt={ _,done in wakeAttempts += 1; done(true) }
+  owner.handleSleep(); owner.handleWake(); wakeTasks.removeFirst()()
+  try check(!owner.visibilityPaused && owner.canManageVisibility && wakeTasks.isEmpty,"A later wake must recover a previously paused layout")
+  owner.handleSleep(); owner.handleWake(); owner.handleSleep(); wakeTasks.removeFirst()()
+  try check(wakeAttempts == 4 && !owner.wakeRecovery.isActive,"Sleeping again cancels delayed writes")
+  owner.handleWake(); owner.recheckPermissions(); wakeTasks.removeFirst()()
+  try check(wakeAttempts == 4 && !owner.wakeRecovery.isActive,"Explicit retry cancels the wake scheduler")
+  var heldWakeToken:Int?, heldWakeCompletion:((Bool)->Void)?
+  owner.fixtureWakeAttempt={ token,done in heldWakeToken=token; heldWakeCompletion=done }
+  owner.handleSleep(); owner.handleWake(); wakeTasks.removeFirst()()
+  var releasePipeline:(()->Void)?, staleResult:Bool?
+  owner.visibilityPipeline.submit { releasePipeline=$0 }
+  owner.applyVisibility(wakeToken:heldWakeToken!) { staleResult=$0 }
+  owner.handleSleep(); releasePipeline?(); heldWakeCompletion?(true)
+  try check(staleResult == false && !owner.wakeRecovery.isActive && owner.suspended,"Queued work and completions from the previous wake must be ignored")
+  owner.fixtureWakeAttempt=nil; owner.fixtureRestoreVisibility=nil
+  owner.wakeRecovery=WakeRecovery(); owner.visibilityPaused=false; owner.suspended=false; owner.menuDataReadable=false
+  print("PASS: controller wake delay, blocked competing updates, bounded failure, next-cycle recovery, sleep/manual cancellation and recovery UI")
   owner.fixtureInstalled=true; owner.fixtureControlAccess=false
   owner.setupPending=true; owner.menuDataAccess = .permissionRequired
   owner.refreshSettingsUI()

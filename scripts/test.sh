@@ -28,3 +28,6 @@ build/tests/update-policy
 
 xcrun swiftc -target arm64-apple-macos26.0 Sources/PermissionRecovery.swift Tests/PermissionRecoveryTests.swift -o build/tests/permission-recovery
 build/tests/permission-recovery
+
+xcrun swiftc -target arm64-apple-macos26.0 Sources/WakeRecovery.swift Tests/WakeRecoveryTests.swift -o build/tests/wake-recovery
+build/tests/wake-recovery
