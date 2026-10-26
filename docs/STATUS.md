@@ -6,7 +6,7 @@
 - Rechecks access and restarts a stopped recovery helper before applying the layout. Busy or unavailable menu bars consume an attempt without forcing a write. Wake recovery does not restart the macOS menu-bar service.
 - Blocks competing automatic layout changes during recovery and retains the paused anti-flicker safeguard after exhaustion. Sleep, quit and manual retry invalidate pending attempts and callbacks. A later sleep/wake cycle gets a fresh bounded budget.
 
-Deterministic clock tests and the production-controller fixture cover delays, exhaustion, success, duplicate notifications/completions, competing updates, prior-pause recovery, stale queued work and cancellation. Real overnight sleep/wake on the updated app remains for daily-use testing; the installed app and its grants are left unchanged.
+Deterministic clock tests and the production-controller fixture cover delays, exhaustion, success, duplicate notifications/completions, competing updates, prior-pause recovery, stale queued work and cancellation. Real overnight sleep/wake on the updated app remains for daily-use testing; the installed app and its grants are left unchanged. Published 0.2.9 after the universal build, ten pure suites, controller/Settings fixture, mounted DMG/license checks and signed public download/feed verification passed.
 
 ## 0.2.8 (build 13)
 
