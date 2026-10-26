@@ -4,6 +4,11 @@ import ApplicationServices
 // Opt-in real OS approval test. Uses production permission actions and Settings,
 // but never starts menu management, the updater, login items, or a recovery helper.
 final class PermissionJourney:NSObject {
+ #if SIDETRAY_PERMISSION_BUILD_TWO
+ let testBuild=2
+ #else
+ let testBuild=1
+ #endif
  let owner=Controller()
  var timer:Timer?
  var checking=false
@@ -29,9 +34,11 @@ final class PermissionJourney:NSObject {
     self.owner.menuDataAccess=result; self.owner.menuDataReadable=result == .available
     self.owner.refreshSettingsUI()
     self.owner.advancePermissionSetup()
-    self.owner.settings?.title="SideTray Permission Test — Set Up SideTray"
+    self.owner.settings?.title="SideTray Permission Test — Build \(self.testBuild)"
     self.owner.settingsUI?.nextForPermissionTestDisabled()
-    let evidence=["controlGranted":self.owner.controlAccessGranted,"dataGranted":self.owner.menuDataReadable]
+    let evidence:[String:Any]=["controlGranted":self.owner.controlAccessGranted,"dataGranted":self.owner.menuDataReadable,
+     "build":self.testBuild,"pid":ProcessInfo.processInfo.processIdentifier,
+     "bundlePath":Bundle.main.bundlePath,"checkedAt":ISO8601DateFormatter().string(from:Date())]
     if let data=try? JSONSerialization.data(withJSONObject:evidence,options:.sortedKeys) {
      try? data.write(to:Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("permission-journey-status.json"),options:.atomic)
     }

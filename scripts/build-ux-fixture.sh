@@ -8,11 +8,18 @@ fixture_flags=""
 fixture_id=io.sidetray.test.ux
 fixture_name="SideTray UX Test"
 if [ "${SIDETRAY_PERMISSION_JOURNEY:-0}" = 1 ]; then
+ case "${SIDETRAY_PERMISSION_BUILD:-1}" in
+  1|2) ;;
+  *) echo "SIDETRAY_PERMISSION_BUILD must be 1 or 2" >&2; exit 1 ;;
+ esac
  fixture_bundle="build/SideTray Permission Test.app"
  fixture_main=Tests/PermissionJourney.swift
  fixture_flags="-D SIDETRAY_PERMISSION_JOURNEY"
  fixture_id=io.sidetray.test.permissions
  fixture_name="SideTray Permission Test"
+ if [ "${SIDETRAY_PERMISSION_BUILD:-1}" = 2 ]; then
+  fixture_flags="$fixture_flags -D SIDETRAY_PERMISSION_BUILD_TWO"
+ fi
 fi
 mkdir -p "$fixture_bundle/Contents/MacOS" "$fixture_bundle/Contents/Resources" build/tests
 cp Assets/SideTray.icns "$fixture_bundle/Contents/Resources/SideTray.icns"
@@ -29,6 +36,7 @@ cat > "$fixture_bundle/Contents/Info.plist" <<PLIST
 <key>CFBundleIconFile</key><string>SideTray</string>
 <key>CFBundleExecutable</key><string>SideTrayUXFixture</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>${SIDETRAY_PERMISSION_BUILD:-1}</string>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
 </dict></plist>
 PLIST

@@ -1,5 +1,9 @@
 # Beta status
 
+## Local signing experiment — October 26, 2026
+
+Both Device Control and Full Disk Access survived replacing an isolated test app with a different build signed by the same self-signed certificate on macOS 27.0.1. Verified actual permission probes, distinct processes/executables and matching designated requirements; no permission changes between builds. Temporary grants and signing keychain were removed afterward. Public releases and installed SideTray remain unchanged. See [test evidence and limitations](SELF-SIGNED-PERMISSION-TEST.md). A production signing rollout remains separate work.
+
 ## 0.2.9 (build 14)
 
 - Restores the saved layout after wake with at most three attempts, waiting 2 seconds initially, then 5 and 15 seconds after failed attempts. A successful attempt stops the sequence.
