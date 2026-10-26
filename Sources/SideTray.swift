@@ -576,7 +576,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  // Advance each visible setup step once, without pulling people away from Updates.
  func advancePermissionSetup() {
-  guard isInstalled,settings?.isVisible == true,settingsTab == "permissions",
+  guard !wakeRecovery.isActive,isInstalled,settings?.isVisible == true,settingsTab == "permissions",
         setupPending || permissionRecovery.isActive else { return }
   if !controlAccessGranted {
    if !controlRequestSent { openPermissions() }
@@ -586,6 +586,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  // Returns true while access recovery owns resuming the saved layout.
  @discardableResult func updatePermissionRecovery() -> Bool {
+  guard !wakeRecovery.isActive else { return false }
   let action=permissionRecovery.evaluate(setupPending:setupPending,installed:isInstalled,
    controlGranted:controlAccessGranted,dataPermissionMissing:menuDataAccess == .permissionRequired,ready:accessReady && !visibilityPaused && !wakeRecovery.isActive)
   switch action {

@@ -120,6 +120,9 @@ final class UXFixture:NSObject {
   owner.fixtureWakeAttempt={ _,done in wakeAttempts += 1; self.owner.pauseAfterVisibilityFailure(); done(false) }
   owner.handleSleep(); owner.handleWake(); owner.handleWake()
   try check(wakeTasks.count == 1 && wakeAttempts == 0 && !owner.canManageVisibility,"Wake must settle and coalesce duplicate notifications")
+  owner.fixtureControlAccess=false; owner.menuDataAccess = .permissionRequired
+  try check(!owner.updatePermissionRecovery() && !owner.permissionRecovery.isActive,"Transient wake access failures must not start onboarding before retries finish")
+  owner.fixtureControlAccess=true; owner.menuDataAccess = .available
   var ordinaryResult:Bool?
   owner.applyVisibility { ordinaryResult=$0 }
   try check(ordinaryResult == false,"App-change transactions must not bypass wake delays")
