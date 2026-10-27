@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 release_bundle=${1:-build/staging/SideTray.app}
+python3 scripts/release-signing.py verify "$release_bundle"
 sh scripts/check-bundle-licenses.sh "$release_bundle"
 sh scripts/fetch-sparkle.sh
 codesign --verify --deep --strict "$release_bundle"

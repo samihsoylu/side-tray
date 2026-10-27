@@ -16,7 +16,9 @@ if [ "$release_publish" = 1 ]; then
  gh auth status >/dev/null 2>&1
  release_start_commit=$(git rev-parse HEAD)
 fi
+python3 scripts/release-signing.py preflight
 SIDETRAY_STAGE_ONLY=1 sh scripts/build-prototype.sh
+python3 scripts/test-release-signing.py
 sh scripts/test.sh
 sh scripts/build-ux-fixture.sh
 build/SideTrayUXFixture.app/Contents/MacOS/SideTrayUXFixture --self-test

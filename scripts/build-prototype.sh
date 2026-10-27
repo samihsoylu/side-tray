@@ -1,11 +1,14 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+if [ "${SIDETRAY_ADHOC:-0}" != 1 ]; then python3 scripts/release-signing.py preflight; fi
 sh scripts/fetch-sparkle.sh
 task_framework=build/dependencies/Sparkle-2.10.0
 task_bundle=build/SideTray.app
 if [ "${SIDETRAY_STAGE_ONLY:-0}" = 1 ]; then
  task_bundle=build/staging/SideTray.app
+ # Staging is disposable; do not carry interrupted codesign .cstemp files into a release.
+ rm -rf "$task_bundle"
 elif pgrep -x SideTray >/dev/null; then
  echo "Quit SideTray before rebuilding so the running app and its permission signature stay intact." >&2
  exit 1
@@ -32,11 +35,11 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 <key>SideTrayAuthorEmail</key><string>mail@samihsoylu.nl</string>
 <key>CFBundleExecutable</key><string>SideTray</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>14</string>
+<key>CFBundleVersion</key><string>15</string>
 <key>SideTrayReleaseChannel</key><string>Beta</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
-<key>CFBundleShortVersionString</key><string>0.2.9</string>
+<key>CFBundleShortVersionString</key><string>0.2.10</string>
 <key>SUFeedURL</key><string>https://raw.githubusercontent.com/samihsoylu/side-tray/main/appcast-dmg.xml</string>
 <key>SUPublicEDKey</key><string>r7UuuKkGu2L7nTKNXnACxbidTszFTK5hkGmAygh0tS0=</string>
 <key>SUEnableAutomaticChecks</key><false/>
@@ -50,7 +53,11 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 PLIST
 mkdir -p "$task_bundle/Contents/Frameworks"
 ditto "$task_framework/Sparkle.framework" "$task_bundle/Contents/Frameworks/Sparkle.framework"
-codesign --force --sign "${SIDETRAY_SIGNING_IDENTITY:--}" "$task_bundle"
+if [ "${SIDETRAY_ADHOC:-0}" = 1 ]; then
+ codesign --force --sign - "$task_bundle"
+else
+ python3 scripts/release-signing.py sign "$task_bundle"
+fi
 codesign --verify --strict "$task_bundle"
 xcrun lipo -archs "$task_bundle/Contents/MacOS/SideTray"
 /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$task_bundle/Contents/Info.plist"

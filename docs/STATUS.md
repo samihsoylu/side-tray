@@ -1,5 +1,12 @@
 # Beta status
 
+## 0.2.10 (build 15)
+
+- Uses a durable self-signed certificate so subsequent releases retain the same app identity. Migration from 0.2.9 or earlier may need one final permission refresh; saved app choices and the first-open Gatekeeper flow are unchanged.
+- Pins the public certificate and verifies the stable designated requirement on every architecture, before packaging and inside the mounted release DMG. Missing keys, identity overrides, ad-hoc artifacts and weakened requirements block release preparation. No private signing material is committed.
+
+Signing checks passed, including re-signing changed bundle bytes with the same identity and rejecting unsafe alternatives. Both isolated DMG updater paths (ad-hoc to self-signed, then same-certificate to same-certificate) passed actual replacement/relaunch and bounded conflicting-feed recovery. Earlier live two-build permission testing retained both real grants on macOS 27.0.1; public production migration, fresh-Mac behavior and Intel execution remain user testing. Full release validation/publication is pending; the installed app remains untouched.
+
 ## Local signing experiment — October 26, 2026
 
 Both Device Control and Full Disk Access survived replacing an isolated test app with a different build signed by the same self-signed certificate on macOS 27.0.1. Verified actual permission probes, distinct processes/executables and matching designated requirements; no permission changes between builds. Temporary grants and signing keychain were removed afterward. Public releases and installed SideTray remain unchanged. See [test evidence and limitations](SELF-SIGNED-PERMISSION-TEST.md). A production signing rollout remains separate work.

@@ -6,6 +6,16 @@ The public feed is `appcast-dmg.xml` on the repository’s main branch. Archives
 
 Sparkle uses an Ed25519 key to authenticate the feed and DMG. This is separate from Apple Developer ID code signing and notarization, which remain deferred. The private key is in the maintainer’s login Keychain under account `io.sidetray.updates`; only the public key is committed. Keep a secure backup of the key outside the repository. Do not generate a replacement key for an existing release line or export a private key into Git.
 
+## Stable app signing identity
+
+From 0.2.10, production builds use the same **SideTray Release Signing** self-signed certificate. Its public certificate and SHA-1/SHA-256 fingerprints are committed under `Signing/`; the private key is in the maintainer's login Keychain. This keeps the app's designated requirement stable across builds. It does not provide Apple Developer ID recognition or notarization.
+
+`release-signing.py` checks the pinned key before building, signs with an explicit certificate-based requirement, and verifies that requirement for every architecture. Preparation and mounted-DMG verification reject ad-hoc signatures, other certificates and changed requirements. Missing keys stop the release: **restore the existing identity; never generate a replacement as part of a release**. Environment overrides cannot substitute another identity.
+
+An encrypted PKCS#12 recovery copy is stored outside Git in `~/Library/Application Support/SideTray Signing/SideTray-Release-Signing.p12`. Its generated password is in login Keychain as service **SideTray Release Signing Backup**, account **production-2026**. Keep an encrypted off-device copy and its password in secure storage before changing or retiring this Mac. The local recovery copy alone does not protect against loss of this Mac. Restore the original certificate/private key on another release machine and compare its fingerprint with `Signing/identity.json`; do not enable global certificate trust. Never put the archive, password or private key in Git or release assets.
+
+The previous ad-hoc identity cannot be preserved by this new certificate. Users may need one final permission refresh when moving from 0.2.9 or earlier. Subsequent releases must keep the pinned identity. The isolated two-build test verified both real permission grants survive this kind of identity continuity on macOS 27.0.1; it does not promise that macOS can never request access again.
+
 ## Build and prepare
 
 1. Increase `CFBundleVersion` monotonically and set `CFBundleShortVersionString` in `scripts/build-prototype.sh`.

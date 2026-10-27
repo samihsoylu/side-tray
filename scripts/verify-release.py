@@ -45,6 +45,7 @@ with tempfile.TemporaryDirectory(prefix='sidetray-release-check-') as mount:
         assert b'/Users/' not in (root / '.DS_Store').read_bytes(), 'Installer layout must not contain a local user path'
         assert set(subprocess.check_output(['lipo', '-archs', str(app / 'Contents/MacOS/SideTray')], text=True).split()) == {'arm64', 'x86_64'}
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
+        subprocess.run(['python3', 'scripts/release-signing.py', 'verify', str(app)], check=True)
         subprocess.run(['sh', 'scripts/check-bundle-licenses.sh', str(app)], check=True)
     finally:
         subprocess.run(['hdiutil', 'detach', '-quiet', mount], check=True)

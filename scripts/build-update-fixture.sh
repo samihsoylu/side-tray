@@ -10,11 +10,17 @@ rm -rf "$fixture_root/installed" "$fixture_root/release" "$fixture_root/dmg-stag
 mkdir -p "$fixture_root"
 xcrun swiftc -target arm64-apple-macos26.0 -D SIDETRAY_UPDATE_FIXTURE -F build/dependencies/Sparkle-2.10.0 -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/UpdatePolicy.swift Sources/Updates.swift Tests/UpdateFixture.swift -o "$fixture_root/fixture"
 # A disposable key is used only for the local test feed and fixture bundles.
-xcrun swift -e 'import CryptoKit; import Foundation; let k=Curve25519.Signing.PrivateKey(); let d=URL(fileURLWithPath:CommandLine.arguments[1]); try k.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-key")); try k.publicKey.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-public"))' "$fixture_root"
+xcrun swift -target arm64-apple-macos26.0 -e 'import CryptoKit; import Foundation; let k=Curve25519.Signing.PrivateKey(); let d=URL(fileURLWithPath:CommandLine.arguments[1]); try k.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-key")); try k.publicKey.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-public"))' "$fixture_root"
 chmod 600 "$fixture_root/test-key"
 python3 - "$fixture_root" <<'PY'
 import pathlib,plistlib,sys,subprocess,os,shutil
 root=pathlib.Path(sys.argv[1]); public=(root/'test-public').read_text()
+signing=os.environ.get('SIDETRAY_TEST_SIGNING','adhoc')
+assert signing in ('adhoc','transition','self-signed')
+if signing != 'adhoc':
+ subprocess.run(['python3','scripts/release-signing.py','preflight'],check=True)
+ import json
+ certificate=json.loads(pathlib.Path('Signing/identity.json').read_text())['certificateSHA1']
 # Install outside protected Documents: the fixture does not need access to user files.
 installed=pathlib.Path.home()/'Library/Caches/io.sidetray.test.updater/Installed'
 shutil.rmtree(installed,ignore_errors=True)
@@ -26,7 +32,9 @@ for version in ('1','2'):
  subprocess.run(['ditto','build/dependencies/Sparkle-2.10.0/Sparkle.framework',str(app/'Contents/Frameworks/Sparkle.framework')],check=True)
  info=dict(CFBundleIdentifier='io.sidetray.test.updater',CFBundleName='SideTray Update Test',CFBundleExecutable='UpdateFixture',CFBundlePackageType='APPL',CFBundleVersion=version,CFBundleShortVersionString='0.0.'+version,LSMinimumSystemVersion='27.0',SUFeedURL='http://127.0.0.1:18743/appcast.xml',SUPublicEDKey=public,SUEnableAutomaticChecks=False,SUAutomaticallyUpdate=False,SUAllowsAutomaticUpdates=False,SUVerifyUpdateBeforeExtraction=True,SURequireSignedFeed=True,SUSignedFeedFailureExpirationInterval=0)
  (app/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
- subprocess.run(['codesign','--force','--sign','-',str(app)],check=True)
+ identity=certificate if signing=='self-signed' or (signing=='transition' and version=='2') else '-'
+ subprocess.run(['codesign','--force','--timestamp=none','--sign',identity,str(app)],check=True)
+ subprocess.run(['codesign','--verify','--deep','--strict',str(app)],check=True)
 format=os.environ.get('SIDETRAY_UPDATE_FORMAT','zip')
 if format=='dmg':
  stage=root/'dmg-stage'

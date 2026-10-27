@@ -15,7 +15,7 @@ After launch, SideTray requests Device Control automatically, then opens Full Di
 
 ## An update asks for permissions again
 
-Current beta builds are ad-hoc signed. Replacing the app can change the identity macOS associates with a previous permission grant, even when its switch still looks enabled.
+Version 0.2.10 introduces a stable signing identity so future updates can retain permissions. Moving from 0.2.9 or earlier may require one final refresh, even when the existing switch looks enabled. Both permissions survived an update between two builds with the same self-signed identity in testing on macOS 27.0.1.
 
 SideTray automatically opens **Restore access to SideTray** when it detects missing access after an update.
 
@@ -27,7 +27,7 @@ SideTray checks automatically and resumes your saved layout when access is ready
 
 Use **Show App in Finder** to locate the running app when adding it. First-time setup says **Set Up SideTray** and does not describe a previous grant.
 
-Your app choices are retained. Apple signing and notarization are planned separately; the update-download signature does not replace them.
+Your app choices are retained. Apple Developer ID signing and notarization remain deferred; the stable self-signed identity does not remove the first-open warning.
 
 ## Icons did not return when quitting
 

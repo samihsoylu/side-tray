@@ -3,13 +3,13 @@
 SideTray is a Swift/AppKit menu bar utility. Build on macOS with Xcode Command Line Tools, Python 3, and network access for the pinned Sparkle dependency.
 
 ```sh
-SIDETRAY_STAGE_ONLY=1 sh scripts/build-prototype.sh
+SIDETRAY_ADHOC=1 SIDETRAY_STAGE_ONLY=1 sh scripts/build-prototype.sh
 sh scripts/test.sh
 sh scripts/build-ux-fixture.sh
 build/SideTrayUXFixture.app/Contents/MacOS/SideTrayUXFixture --self-test
 ```
 
-The staging build produces `build/staging/SideTray.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Both the GPL license (`LICENSE.txt`) and Sparkle license are included in the app’s `Contents/Resources` before signing. Normal builds use ad-hoc code signing. Developer ID signing and notarization are deferred.
+The staging build produces `build/staging/SideTray.app` without replacing a running app. It includes arm64 and x86_64 slices, an app icon, and Sparkle 2.10.0. The dependency download is pinned by SHA-256; its license is in `ThirdParty/`. Both the GPL license (`LICENSE.txt`) and Sparkle license are included in the app’s `Contents/Resources` before signing. The command above explicitly makes a local ad-hoc development build; it cannot be released. Production builds omit `SIDETRAY_ADHOC` and require the pinned release certificate in Keychain. Developer ID signing and notarization are deferred.
 
 The SDK target is explicit. An implicit deployment target on a newer toolchain can produce a binary that runs directly but cannot relaunch through Launch Services on the test Mac.
 
@@ -39,3 +39,7 @@ and run `python3 scripts/test-update-feed-recovery.py`. It starts its own server
 serves signed conflicting feeds, checks distinct request URLs and one retry only,
 then verifies an actual fixture replacement and relaunch. The fixture exits itself;
 the installed production SideTray is not changed.
+
+For code-signing update compatibility, build the isolated DMG fixture with `SIDETRAY_TEST_SIGNING=transition` (ad-hoc build 1 to certificate-signed build 2), or `SIDETRAY_TEST_SIGNING=self-signed` (both builds use the pinned release certificate). These require the release private key but use only the test app identifier and disposable update-feed key. Run `test-update-feed-recovery.py` after each build to verify actual installation/relaunch; no real menu permissions are requested.
+
+After a production staging build, `python3 scripts/test-release-signing.py` checks the pinned identity, changed-build continuity, missing-key/override rejection, and rejection of ad-hoc or weakened-requirement artifacts. The release script runs these checks automatically.

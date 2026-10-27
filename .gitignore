@@ -10,3 +10,6 @@ PRODUCT-UX-AUDIT.md
 *.pem
 .env
 .env.*
+*.key
+*.keychain
+*.keychain-db
