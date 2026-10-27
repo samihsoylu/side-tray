@@ -7,6 +7,7 @@ final class VisibilityPipeline {
  typealias Work = (@escaping () -> Void) -> Void
  private var pending = [Work]()
  private var running = false
+ var isBusy:Bool { running || !pending.isEmpty }
  func submit(_ work: @escaping Work) {
   precondition(Thread.isMainThread)
   pending.append(work)

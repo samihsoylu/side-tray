@@ -97,6 +97,10 @@ final class Controller: NSObject, NSApplicationDelegate {
  var permissionCheckRequested=false
  var trayErrorBundle:String?
  var visibilityMessage="" { didSet { settingsUI?.updateMessage() } }
+ var pendingTrayOpen=false
+ var controlArrangementPending=false
+ var controlArrangementScheduled=false
+ var statusMenuOpen=false
  var openingMenu=false
  var listBundles=[String]()
  var placementBusy=false
@@ -139,6 +143,10 @@ final class Controller: NSObject, NSApplicationDelegate {
  var fixtureRestoreVisibility:(()->Void)?
  var fixtureReadinessCheck:((@escaping()->Void)->Void)?
  var fixtureInitialLayout:((@escaping(Bool)->Void)->Void)?
+ var fixtureShowTray:(()->Void)?
+ var fixtureArrangeControl:((@escaping(Bool)->Void)->Void)?
+ var fixtureScheduleArrangement:((@escaping()->Void)->Void)?
+ var fixtureExternalMenuOpen:Bool?
  var fixtureOpenSettings:((String)->Void)?
  var fixtureCheckPermissions:(()->Void)?
  var fixtureControlAccess:Bool?
@@ -216,8 +224,8 @@ final class Controller: NSObject, NSApplicationDelegate {
    if event.type == .keyDown && event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "," { self.showSettings(); return nil }
    if event.type == .keyDown && event.window === self.panel && self.panel.handleKey(event) { return nil }
    if event.type == .keyDown && event.keyCode == 53 && self.activeMenuBundle != nil { self.closeActiveMenu(); return nil }
-   if self.panel.isVisible && event.type == .keyDown && event.keyCode == 53 { self.panel.orderOut(nil); return nil }
-   if event.type != .keyDown && event.window !== self.panel && event.window !== self.status.button?.window { self.panel.orderOut(nil) }
+   if (self.panel.isVisible || self.pendingTrayOpen) && event.type == .keyDown && event.keyCode == 53 { self.dismissTray(); return nil }
+   if event.type != .keyDown && event.window !== self.panel && event.window !== self.status.button?.window { self.dismissTray() }
    return event
   }
   installGlobalMonitor()
@@ -252,7 +260,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   monitor=NSEvent.addGlobalMonitorForEvents(matching:mask) { [weak self] event in
    guard let self else { return }
    if event.type == .keyDown {
-    if event.keyCode == 53 { self.closeActiveMenu(); self.panel.orderOut(nil) }
+    if event.keyCode == 53 { self.closeActiveMenu(); self.dismissTray() }
     return
    }
    if event.type == .leftMouseUp,let bundle=self.activeMenuBundle,let point=event.cgEvent?.location ?? CGEvent(source:nil)?.location {
@@ -270,25 +278,51 @@ final class Controller: NSObject, NSApplicationDelegate {
    // Dismiss on an outside press, not the release that just opened the tray.
    // MenuBarAgent owns the status item, so its mouse-up is a global event here.
    guard event.type == .leftMouseDown || event.type == .rightMouseDown else { return }
-   guard !self.panel.frame.contains(NSEvent.mouseLocation) else { return }
+   guard !self.panel.isVisible || !self.panel.frame.contains(NSEvent.mouseLocation) else { return }
    if let point=event.cgEvent?.location,
       barSlots().contains(where: { $0.pid == ProcessInfo.processInfo.processIdentifier && $0.frame.contains(point) }) { return }
-   self.panel.orderOut(nil)
+   self.dismissTray()
   }
   UserDefaults.standard.set(monitor != nil,forKey:"globalMonitorReady")
  }
  @objc func statusClicked() {
+  // Native repositioning generates a mouse-up on this same button.
   guard !ordering.isMoving else { return }
   if NSApp.currentEvent?.type == .rightMouseUp,let button=status.button {
-   panel.orderOut(nil)
+   dismissTray()
+   statusMenuOpen=true
+   defer { statusMenuOpen=false; scheduleControlArrangement() }
    let menu=commandMenu(); menu.popUp(positioning:nil,at:NSPoint(x:0,y:button.bounds.height),in:button); return
   }
   toggle()
  }
+ // Waiting is different from a missing grant. Retain only an explicit open request.
+ var shouldDeferTrayOpen:Bool {
+  guard !setupPending,isInstalled,!suspended,!terminating else { return false }
+  if wakeRecovery.isActive { return true }
+  guard controlAccessGranted,menuDataAccess != .permissionRequired,!visibilityPaused,!recoveryBlocked else { return false }
+  return checkingPermissions || visibilityPipeline.isBusy || placementBusy || ordering.isMoving
+ }
+ func dismissTray() {
+  pendingTrayOpen=false
+  panel?.orderOut(nil)
+  scheduleControlArrangement()
+ }
+ func flushPendingTrayOpen() {
+  guard pendingTrayOpen else { return }
+  guard !suspended,!terminating else { pendingTrayOpen=false; return }
+  guard !shouldDeferTrayOpen else { return }
+  pendingTrayOpen=false; toggle()
+ }
  @objc func toggle() {
-  if panel.isVisible { panel.orderOut(nil); return }
+  guard !suspended,!terminating else { return }
+  if panel.isVisible || pendingTrayOpen { dismissTray(); return }
+  if shouldDeferTrayOpen { pendingTrayOpen=true; return }
   guard canManageVisibility else { showSettings(destination:setupPending && accessReady ? "apps" : "permissions"); return }
   if activeMenuBundle != nil { closeActiveMenu() }
+  #if SIDETRAY_UX_FIXTURE
+  if let show=fixtureShowTray { show(); return }
+  #endif
   let anchors=barSlots().filter { $0.pid == ProcessInfo.processInfo.processIdentifier }
   let displays=NSScreen.screens.compactMap { $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID }
   let point=NSApp.currentEvent?.cgEvent?.location ?? CGEvent(source:nil)?.location
@@ -396,7 +430,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  func forwardClick(_ fresh:Entry,completion: @escaping () -> Void = {}) {
   guard let bundle=fresh.app.bundleIdentifier else { completion(); return }
-  panel.orderOut(nil)
+  dismissTray()
   activation.open(bundle:bundle,display:trayDisplay) { observed in
    if !observed { self.showMenuFailure(bundle) }
    completion()
@@ -456,6 +490,7 @@ final class Controller: NSObject, NSApplicationDelegate {
    self.applyVisibilityNow(reveal:reveal,wakeToken:wakeToken) { ok in
     completion(ok)
     finish()
+    self.flushPendingTrayOpen(); self.scheduleControlArrangement()
    }
   }
  }
@@ -578,13 +613,37 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  func arrangeControl() {
-  DispatchQueue.main.asyncAfter(deadline:.now()+0.4) {
-   guard !self.suspended,!self.openingMenu,self.activeMenuBundle == nil else { return }
-   self.ordering.arrange(visible:self.placement.visible) { ok in
+  controlArrangementPending=true
+  scheduleControlArrangement()
+ }
+ var canArrangeControl:Bool {
+  canManageVisibility && !suspended && !terminating && !openingMenu && activeMenuBundle == nil &&
+  !statusMenuOpen && panel?.isVisible != true && settings?.isVisible != true &&
+  !ordering.isMoving && !visibilityPipeline.isBusy && !placementBusy && !checkingPermissions && !externalMenuOpen
+ }
+ func scheduleControlArrangement() {
+  guard controlArrangementPending,!controlArrangementScheduled,canArrangeControl else { return }
+  controlArrangementScheduled=true
+  let work:()->Void = { [weak self] in
+   guard let self else { return }
+   self.controlArrangementScheduled=false
+   // Recheck after the delay: a click may have opened the tray in the meantime.
+   guard self.controlArrangementPending,self.canArrangeControl else { return }
+   self.controlArrangementPending=false
+   let finished:(Bool)->Void = { ok in
     if !ok { self.visibilityMessage="SideTray’s button could not be positioned. If the menu bar is full, uncheck an app above." }
     else if self.visibilityMessage.hasPrefix("SideTray’s button could not") { self.visibilityMessage="" }
+    self.flushPendingTrayOpen()
    }
+   #if SIDETRAY_UX_FIXTURE
+   if let arrange=self.fixtureArrangeControl { arrange(finished); return }
+   #endif
+   self.ordering.arrange(visible:self.placement.visible,completion:finished)
   }
+  #if SIDETRAY_UX_FIXTURE
+  if let schedule=fixtureScheduleArrangement { schedule(work); return }
+  #endif
+  DispatchQueue.main.asyncAfter(deadline:.now()+0.4,execute:work)
  }
  @objc func openMenuDataPermissions() { openPrivacySettings("Privacy_AllFiles") }
  // Permission checks never display an alert or open another app.
@@ -808,7 +867,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  func revealAndOpen(_ bundle:String) {
   openingMenu=true
   stopMenuWatch()
-  panel.orderOut(nil)
+  dismissTray()
   let start=Date()
   applyVisibility(reveal:bundle) { ok in
    guard ok else { self.openingMenu=false; self.showSettings(); return }
@@ -832,7 +891,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  @objc func removeFromTray(_ sender:NSMenuItem) {
   guard canManageVisibility,!openingMenu,!placementBusy,let bundle=sender.representedObject as? String else { return }
-  panel.orderOut(nil)
+  dismissTray()
   let previous=placement.visible; var next=previous; next.insert(bundle)
   placement.commit(next); placementBusy=true
   applyVisibility { ok in
@@ -867,8 +926,8 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  func handleSleep() {
   setupReadiness.cancel()
-  suspended=true; wakeRecovery.cancel()
-  stopMenuWatch(); panel?.orderOut(nil); activation.cancel(); ordering.cancel(); restoreVisibility()
+  suspended=true; wakeRecovery.cancel(); pendingTrayOpen=false; controlArrangementPending=false
+  stopMenuWatch(); dismissTray(); activation.cancel(); ordering.cancel(); restoreVisibility()
  }
  func handleWake() {
   guard suspended else { return } // Duplicate wake notifications do not reset the budget.
@@ -899,7 +958,10 @@ final class Controller: NSObject, NSApplicationDelegate {
   refreshSettingsUI()
  }
  var externalMenuOpen:Bool {
-  (CGWindowListCopyWindowInfo(.optionOnScreenOnly,kCGNullWindowID) as? [[String:Any]] ?? []).contains {
+  #if SIDETRAY_UX_FIXTURE
+  if let value=fixtureExternalMenuOpen { return value }
+  #endif
+  return (CGWindowListCopyWindowInfo(.optionOnScreenOnly,kCGNullWindowID) as? [[String:Any]] ?? []).contains {
    $0[kCGWindowLayer as String] as? Int == 101 && $0[kCGWindowOwnerPID as String] as? Int != Int(ProcessInfo.processInfo.processIdentifier)
   }
  }
@@ -938,10 +1000,11 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
   observe(workspace,NSWorkspace.didWakeNotification) { [weak self] in self?.handleWake() }
   observe(workspace,NSWorkspace.willSleepNotification) { [weak self] in self?.handleSleep() }
-  observe(workspace,NSWorkspace.activeSpaceDidChangeNotification) { [weak self] in self?.panel.orderOut(nil) }
-  observe(NotificationCenter.default,NSApplication.didChangeScreenParametersNotification) { [weak self] in self?.panel.orderOut(nil); self?.trayDisplay=nil; self?.activation.cancel() }
+  observe(workspace,NSWorkspace.activeSpaceDidChangeNotification) { [weak self] in self?.dismissTray() }
+  observe(NotificationCenter.default,NSApplication.didChangeScreenParametersNotification) { [weak self] in self?.dismissTray(); self?.trayDisplay=nil; self?.activation.cancel() }
   permissionTimer=Timer.scheduledTimer(withTimeInterval:3,repeats:true) { [weak self] _ in
    guard let self else { return }
+   self.scheduleControlArrangement()
    if let watcher=self.recoveryWatcher,!watcher.isRunning,!self.recoveryBlocked {
     self.recoveryBlocked=true; self.restoreVisibility()
     self.visibilityMessage="The recovery helper stopped. SideTray is restoring icons. Use Retry to restart it."
@@ -958,7 +1021,7 @@ final class Controller: NSObject, NSApplicationDelegate {
     self.trusted=next
     self.installGlobalMonitor()
     if !next {
-     self.stopMenuWatch(); self.activation.cancel(); self.ordering.cancel(); self.restoreVisibility(); self.panel.orderOut(nil)
+     self.stopMenuWatch(); self.activation.cancel(); self.ordering.cancel(); self.restoreVisibility(); self.dismissTray()
      if self.settings?.isVisible == true { self.refreshSettingsUI() }
     } else if self.permissionRecovery.isActive {
      self.updatePermissionRecovery(); self.refreshSettingsUI()
@@ -1016,8 +1079,8 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  func applicationShouldTerminate(_ sender:NSApplication) -> NSApplication.TerminateReply {
   guard !terminating else { return .terminateLater }
-  terminating=true; suspended=true; wakeRecovery.cancel(); setupReadiness.cancel()
-  stopMenuWatch(); panel?.orderOut(nil); activation.cancel(); ordering.cancel()
+  terminating=true; suspended=true; pendingTrayOpen=false; controlArrangementPending=false; wakeRecovery.cancel(); setupReadiness.cancel()
+  stopMenuWatch(); dismissTray(); activation.cancel(); ordering.cancel()
   visibilityQueue.async {
    var failure:Error?
    do { try self.menuSwitches.restore() } catch { failure=error }

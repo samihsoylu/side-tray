@@ -363,7 +363,7 @@ extension Controller {
   NSApp.orderFrontStandardAboutPanel(options:options)
  }
  func showSettings(destination:String?=nil) {
-  panel.orderOut(nil)
+  dismissTray()
   if settingsUI == nil { settingsUI=SettingsUI(owner:self); settings=settingsUI?.window }
   settingsUI?.select(destination ?? (permissionRecovery.isActive ? "permissions" : nil)); settingsUI?.update()
   settings?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps:true)
@@ -371,7 +371,10 @@ extension Controller {
   DispatchQueue.main.async { [weak self] in self?.advancePermissionSetup() }
   #endif
  }
- func refreshSettingsUI() { settingsUI?.update() }
+ func refreshSettingsUI() {
+  settingsUI?.update()
+  DispatchQueue.main.async { [weak self] in self?.flushPendingTrayOpen(); self?.scheduleControlArrangement() }
+ }
  @objc func forgetApp(_ sender:NSButton) {
   guard !placementBusy,let bundle=sender.identifier?.rawValue,
     NSRunningApplication.runningApplications(withBundleIdentifier:bundle).isEmpty,

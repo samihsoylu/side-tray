@@ -149,8 +149,62 @@ final class UXFixture:NSObject {
   owner.fixtureWakeAttempt=nil; owner.fixtureRestoreVisibility=nil
   owner.wakeRecovery=WakeRecovery(); owner.visibilityPaused=false; owner.suspended=false; owner.menuDataReadable=false
   print("PASS: controller wake delay, blocked competing updates, bounded failure, next-cycle recovery, sleep/manual cancellation and recovery UI")
+  // Early clicks wait for real startup/layout completion without reopening onboarding.
+  owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=true
+  owner.fixtureHelperRunning=true; owner.startupRecoveryComplete=true; owner.recoveryBlocked=false
+  owner.menuDataReadable=true; owner.menuDataAccess = .available
+  owner.permissionRecovery=PermissionRecovery(); owner.settings?.orderOut(nil)
+  owner.fixtureExternalMenuOpen=false
+  var openedTrays=0
+  owner.fixtureShowTray={ openedTrays += 1; self.owner.renderTray(frame:NSRect(x:850,y:650,width:330,height:33)) }
+  owner.checkingPermissions=true
+  owner.toggle()
+  try check(owner.pendingTrayOpen && owner.settings?.isVisible == false && openedTrays == 0,"Early click must wait without opening Settings")
+  owner.toggle(); owner.checkingPermissions=false; owner.flushPendingTrayOpen()
+  try check(!owner.pendingTrayOpen && openedTrays == 0,"A second click cancels the queued open")
+  owner.checkingPermissions=true; owner.toggle(); owner.dismissTray()
+  owner.checkingPermissions=false; owner.flushPendingTrayOpen()
+  try check(openedTrays == 0,"Dismissal cancels a pending open before startup completes")
+  owner.checkingPermissions=true; owner.toggle(); owner.checkingPermissions=false
+  owner.flushPendingTrayOpen(); owner.flushPendingTrayOpen()
+  try check(openedTrays == 1 && owner.panel.isVisible && owner.settings?.isVisible == false,"Successful readiness opens the requested tray exactly once")
+  owner.dismissTray()
+  var releaseLayout:(()->Void)?
+  owner.visibilityPipeline.submit { releaseLayout=$0 }
+  owner.toggle(); owner.flushPendingTrayOpen()
+  try check(owner.pendingTrayOpen && openedTrays == 1,"An initial layout in flight must delay opening")
+  releaseLayout?(); owner.flushPendingTrayOpen()
+  try check(openedTrays == 2,"A completed layout releases the pending open")
+  owner.dismissTray()
+  owner.checkingPermissions=true; owner.toggle(); owner.checkingPermissions=false; owner.fixtureControlAccess=false
+  owner.flushPendingTrayOpen()
+  try check(!owner.pendingTrayOpen && owner.settings?.isVisible == true && owner.settingsTab == "permissions" && !owner.setupPending,"Actual permission failure still routes to recovery without resetting setup")
+  owner.fixtureControlAccess=true; owner.settings?.orderOut(nil)
+  var arrangeTasks=[()->Void](), arrangements=0
+  owner.fixtureScheduleArrangement={ arrangeTasks.append($0) }
+  owner.fixtureArrangeControl={ done in arrangements += 1; done(true) }
+  owner.arrangeControl(); owner.arrangeControl()
+  try check(arrangeTasks.count == 1,"Duplicate positioning requests coalesce")
+  owner.toggle(); arrangeTasks.removeFirst()()
+  try check(arrangements == 0 && owner.controlArrangementPending && owner.panel.isVisible,"A tray opened during the positioning delay must not move")
+  owner.dismissTray(); try check(arrangeTasks.count == 1,"Closing the tray schedules deferred positioning")
+  owner.fixtureExternalMenuOpen=true; arrangeTasks.removeFirst()()
+  try check(arrangements == 0 && owner.controlArrangementPending,"Native menus also defer positioning")
+  owner.fixtureExternalMenuOpen=false; owner.scheduleControlArrangement(); arrangeTasks.removeFirst()()
+  try check(arrangements == 1 && !owner.controlArrangementPending,"Deferred positioning runs once after interaction ends")
+  owner.arrangeControl(); owner.showSettings(destination:"general"); arrangeTasks.removeFirst()()
+  try check(arrangements == 1 && owner.controlArrangementPending,"Settings blocks delayed positioning too")
+  owner.settings?.orderOut(nil); owner.scheduleControlArrangement(); arrangeTasks.removeFirst()()
+  try check(arrangements == 2,"Closing Settings permits the pending positioning")
+  owner.fixtureArrangeControl={ done in arrangements += 1; done(false) }
+  owner.arrangeControl(); arrangeTasks.removeFirst()(); owner.scheduleControlArrangement()
+  try check(arrangements == 3 && arrangeTasks.isEmpty && !owner.controlArrangementPending,"Failed positioning must not repeat automatically")
+  owner.visibilityMessage=""; owner.fixtureShowTray=nil; owner.fixtureArrangeControl=nil
+  owner.fixtureScheduleArrangement=nil; owner.fixtureExternalMenuOpen=nil
+  owner.showSettings(destination:"permissions")
+  print("PASS: early-click readiness, cancellation, initial layout wait, actual permission failure and interaction-safe deferred positioning")
   owner.fixtureInstalled=true; owner.fixtureControlAccess=false
-  owner.setupPending=true; owner.menuDataAccess = .permissionRequired
+  owner.setupPending=true; owner.menuDataAccess = .permissionRequired; owner.menuDataReadable=false
   owner.refreshSettingsUI()
   try check(visibleText().contains("Set Up SideTray") && !visibleText().contains("again"),"First setup must never imply previous approval")
   let accessButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Request Access…" }
