@@ -43,3 +43,11 @@ the installed production SideTray is not changed.
 For code-signing update compatibility, build the isolated DMG fixture with `SIDETRAY_TEST_SIGNING=transition` (ad-hoc build 1 to certificate-signed build 2), or `SIDETRAY_TEST_SIGNING=self-signed` (both builds use the pinned release certificate). These require the release private key but use only the test app identifier and disposable update-feed key. Run `test-update-feed-recovery.py` after each build to verify actual installation/relaunch; no real menu permissions are requested.
 
 After a production staging build, `python3 scripts/test-release-signing.py` checks the pinned identity, changed-build continuity, missing-key/override rejection, and rejection of ad-hoc or weakened-requirement artifacts. The release script runs these checks automatically.
+
+## Complete first-run test
+
+`sh scripts/build-first-run-test.sh` builds **SideTray First Run Test** with the production Controller, final Start action and recovery watcher. It has a separate bundle ID, preferences and recovery journal; updater startup is disabled. Install the test bundle in Applications. Its live status is recorded in `~/Library/Caches/io.sidetray.test.firstrun/status.json`. Unlike the older permission-only harness, no readiness or helper results are injected.
+
+This test can change the actual menu bar: obtain approval for the temporary grants, quit the working SideTray normally before pressing Start, and keep it closed through test relaunch. Exercise Request Access, enable both permissions in either order, choose apps, Start, reopen Settings, and quit/relaunch. Confirm the real helper is running, setupComplete survives relaunch and onboarding buttons stay hidden. Quit the test normally to restore its original menu settings, verify the test watcher exits and journal is cleared, remove its temporary grants, then reopen the unchanged production app. Do not run two managing copies together.
+
+The ordinary UX fixture covers injected readiness failures, the three-attempt cap, cancelled callbacks, failed first-layout setup persistence, and Settings reopening. These simulated failure checks supplement, rather than replace, the live successful first-run journey.

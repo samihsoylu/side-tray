@@ -4,6 +4,8 @@
 
 <h1 align="center">SideTray</h1>
 
+<p align="center">An iBar Pro Alternative</p>
+
 <p align="center">
   Choose which apps stay in your Mac’s menu bar. Open the rest from a compact tray beneath a three-dot button.
 </p>
@@ -19,7 +21,7 @@
 ## Get started
 
 1. Download and open the **DMG**, then drag **SideTray** onto **Applications**.
-2. Open SideTray and follow its permission prompts in **System Settings → Privacy & Security**.
+2. Open SideTray and use **Request Access** to enable its permissions in System Settings.
 3. Select the apps you want to keep visible, then click **Start SideTray**. Unchecked and new apps go into the tray.
 
 If macOS shows **“SideTray” Not Opened**, choose **Done**, then open **System Settings → Privacy & Security**. Under Security, choose **Open / Open Anyway** for SideTray and approve the prompt. Only do this for the [official download](https://github.com/samihsoylu/side-tray/releases). [First-launch help](docs/HELP.md#macos-says-sidetray-not-opened)

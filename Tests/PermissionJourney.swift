@@ -16,6 +16,7 @@ final class PermissionJourney:NSObject {
   owner.setupPending=true
   owner.fixtureInstalled=true; owner.fixtureHelperRunning=true
   owner.startupRecoveryComplete=true
+  owner.fixtureReadinessCheck={ done in done() }
   owner.fixtureResumeVisibility={ completion in completion(true) }
   owner.fixtureCheckPermissions={ [weak self] in self?.checkAccess() }
   owner.panel=TrayPanel(contentRect:.zero,styleMask:[.borderless],backing:.buffered,defer:false)

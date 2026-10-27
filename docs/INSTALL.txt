@@ -13,9 +13,9 @@ SideTray is downloaded directly from GitHub. If macOS blocks it:
 
 SET UP SIDETRAY
 
-Follow the permission prompt and enable SideTray under Device Control.
-In Full Disk Access, enable SideTray too. If it is missing, drag the
-SideTray icon from its setup window into the Full Disk Access list.
+Click Request Access for each permission and enable SideTray in System
+Settings. If it is missing from a list, drag the SideTray icon from its
+setup window into that list.
 Choose Quit & Reopen if macOS asks.
 
 Select the apps you want to keep visible, then click Start SideTray.

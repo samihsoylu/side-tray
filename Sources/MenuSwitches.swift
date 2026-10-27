@@ -105,7 +105,11 @@ enum MenuSwitchCodec {
 
 /// This path is protected by macOS. No fallback bypasses a denied read.
 final class MenuSwitches {
+ #if SIDETRAY_FIRST_RUN_TEST
+ static let supportDirectory=FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask).first!.appendingPathComponent("SideTray First Run Test")
+ #else
  static let supportDirectory=FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask).first!.appendingPathComponent("SideTray")
+ #endif
  private let domain=NSHomeDirectory()+"/Library/Group Containers/group.com.apple.controlcenter/Library/Preferences/group.com.apple.controlcenter"
  private let journal:URL
  private let readOverride:(() throws -> Data)?

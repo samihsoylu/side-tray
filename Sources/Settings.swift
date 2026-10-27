@@ -7,10 +7,18 @@ private final class AppListDocument:NSView { override var isFlipped:Bool { true 
 // Supply the actual bundle URL; macOS retains approval and authentication.
 final class PermissionAppIcon:NSImageView,NSDraggingSource {
  var appURL=Bundle.main.bundleURL
+ override func draw(_ dirtyRect:NSRect) {
+  let tile=NSBezierPath(roundedRect:bounds.insetBy(dx:0.5,dy:0.5),xRadius:10,yRadius:10)
+  NSColor.controlAccentColor.withAlphaComponent(0.10).setFill(); tile.fill()
+  NSColor.controlAccentColor.withAlphaComponent(0.45).setStroke(); tile.lineWidth=1; tile.stroke()
+  image?.draw(in:bounds.insetBy(dx:10,dy:10),from:.zero,operation:.sourceOver,fraction:1,respectFlipped:true,hints:nil)
+ }
+ override func resetCursorRects() { addCursorRect(bounds,cursor:.openHand) }
+ override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay=true }
  override func mouseDown(with event:NSEvent) { }
  override func mouseDragged(with event:NSEvent) {
   let item=NSDraggingItem(pasteboardWriter:appURL as NSURL)
-  item.setDraggingFrame(bounds,contents:image)
+  item.setDraggingFrame(bounds.insetBy(dx:10,dy:10),contents:image)
   beginDraggingSession(with:[item],event:event,source:self)
  }
  func draggingSession(_ session:NSDraggingSession,sourceOperationMaskFor context:NSDraggingContext)->NSDragOperation { .copy }
@@ -99,7 +107,7 @@ final class SettingsUI:NSObject {
 
  init(owner:Controller) {
   self.owner=owner
-  window=NSWindow(contentRect:NSRect(x:0,y:0,width:500,height:480),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+  window=NSWindow(contentRect:NSRect(x:0,y:0,width:500,height:520),styleMask:[.titled,.closable],backing:.buffered,defer:false)
   super.init()
   window.title="SideTray Settings"; window.isReleasedWhenClosed=false; window.center()
   let root=NSView(); window.contentView=root
@@ -152,11 +160,11 @@ final class SettingsUI:NSObject {
   dataOpen.target=owner; dataOpen.action=#selector(Controller.openMenuDataPermissions)
   permissionApp.image=NSWorkspace.shared.icon(forFile:Bundle.main.bundlePath)
   permissionApp.imageScaling = .scaleProportionallyDown
-  permissionApp.toolTip="Drag SideTray into the Full Disk Access list in System Settings."
-  permissionApp.setAccessibilityLabel("SideTray app — drag to Full Disk Access")
+  permissionApp.toolTip="Drag SideTray into the Device Control or Full Disk Access list in System Settings."
+  permissionApp.setAccessibilityLabel("SideTray app — drag into the permission list")
   permissionApp.translatesAutoresizingMaskIntoConstraints=false
-  NSLayoutConstraint.activate([permissionApp.widthAnchor.constraint(equalToConstant:44),permissionApp.heightAnchor.constraint(equalToConstant:44)])
-  permissionDragRow=stack([permissionApp,label("Missing from the list? Drag this icon into Full Disk Access, then enable SideTray.")],horizontal:true,spacing:10)
+  NSLayoutConstraint.activate([permissionApp.widthAnchor.constraint(equalToConstant:56),permissionApp.heightAnchor.constraint(equalToConstant:56)])
+  permissionDragRow=stack([permissionApp,stack([label("Drag SideTray to add it",heading:true),label("Missing from the list? Drag the highlighted icon into the permission list in System Settings, then turn it on.")],spacing:4)],horizontal:true,spacing:12)
   details.target=self; details.action=#selector(toggleDetails); details.bezelStyle = .disclosure; details.setAccessibilityLabel("Permission details")
   next.target=self; next.action=#selector(chooseApps)
   checkPermissions.target=owner; checkPermissions.action=#selector(Controller.recheckPermissions)
@@ -241,19 +249,17 @@ final class SettingsUI:NSObject {
   controlOpen.title = granted ? "Open System Settings…" : "Request Access…"
   dataOpen.title = dataReady ? "Open System Settings…" : "Request Access…"
   controlOpen.isEnabled=owner.isInstalled
-  controlHelp.stringValue = !granted && owner.controlRequestSent
-   ? "Choose Open System Settings in the macOS prompt, then enable SideTray. If no prompt appears, use the button here."
-   : "Allow SideTray to find and open your apps’ menu bar items."
-  permissionDragRow.isHidden = dataReady || owner.menuDataAccess != .permissionRequired
+  controlHelp.stringValue = "Allow SideTray to find and open your apps’ menu bar items."
+  permissionDragRow.isHidden = !needsPermission
   revealApp.isHidden = permissionDragRow.isHidden || details.state != .on
   controlOpen.isHidden=recovering ? granted : granted && details.state != .on
-  dataOpen.isHidden=recovering ? owner.menuDataAccess != .permissionRequired : dataReady && details.state != .on
+  dataOpen.isHidden = owner.menuDataAccess != .permissionRequired && (!dataReady || recovering || details.state != .on)
   dataHelp.stringValue=dataReady ? "Menu bar visibility settings are connected." : owner.menuSwitches.hasRecoveryRecord ? "Allow Full Disk Access, then use Quit & Reopen. SideTray needs this access to restore your hidden icons." : "Required to hide icons. macOS grants broader file access; SideTray uses it for menu bar settings."
   if owner.menuDataAccess == .unavailable {
-   dataHelp.stringValue="Menu bar settings could not be read. This can be a temporary error or an unsupported macOS format; it does not establish that permission is missing. Try Check Permissions again."
+   dataHelp.stringValue="Menu bar settings could not be read. This can be a temporary error or an unsupported macOS format; it does not establish that permission is missing. Choose Retry."
   } else if owner.menuDataAccess == .checking { dataHelp.stringValue="Checking access to macOS menu bar settings." }
   else if owner.menuDataAccess == .unsupported { dataHelp.stringValue="This build supports macOS 27. SideTray will not change menu bar settings on another major version. Install a compatible SideTray update." }
-  if dataReady && !owner.recoveryHelperRunning { dataHelp.stringValue="Access is granted. The recovery helper is not running; use Check Permissions to retry." }
+  if dataReady && granted && !owner.recoveryHelperRunning && (!owner.setupPending || owner.setupReadiness.state == .exhausted) { dataHelp.stringValue="Access is granted. The recovery helper is not running; choose Retry." }
   accessHelp.isHidden = !needsPermission
   accessHelp.stringValue=owner.setupPending
    ? "Enable SideTray in each list and approve with Touch ID or your password if asked. Choose Quit & Reopen if macOS asks."
@@ -282,7 +288,7 @@ final class SettingsUI:NSObject {
   if owner.visibilityPaused && !needsPermission {
    setupTitle.stringValue="Menu bar management paused"
    setupDescription.isHidden=false
-   setupDescription.stringValue="Your permissions are working. SideTray stopped retrying to keep the menu bar stable. Use Check Permissions to try your saved layout again."
+   setupDescription.stringValue="Your permissions are working. SideTray stopped retrying to keep the menu bar stable. Use Retry to try your saved layout again."
   }
   if owner.wakeRecovery.isActive && !needsPermission {
    setupTitle.stringValue="Restoring your menu bar…"
@@ -290,13 +296,19 @@ final class SettingsUI:NSObject {
    setupDescription.stringValue="SideTray is waiting for macOS and retrying your saved layout. Your permissions are working."
   }
   permissionDetail.isHidden=details.state != .on
-  next.isHidden = !owner.setupPending; next.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive
+  if owner.setupPending && owner.setupReadiness.isActive {
+   setupTitle.stringValue="Connecting to the menu bar…"
+   setupDescription.isHidden=false
+   setupDescription.stringValue="Your permissions are granted. SideTray is preparing to start."
+  }
+  next.isHidden = !owner.setupPending; next.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive && !owner.setupReadiness.isActive
   setupHelp.isHidden = !owner.setupPending
-  appHelp.stringValue=owner.wakeRecovery.isActive ? "Restoring your saved menu bar layout after wake…" : owner.visibilityPaused ? "Menu bar management is paused. Use Check Permissions in the Permissions tab to retry." : owner.accessReady ? "Choose which apps stay in the menu bar. Everything else appears in SideTray." : "Finish the permissions in the Permissions tab to choose your apps."
-  start.isHidden = !owner.setupPending; start.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive && !owner.placementBusy
+  appHelp.stringValue=owner.wakeRecovery.isActive ? "Restoring your saved menu bar layout after wake…" : owner.visibilityPaused ? "Menu bar management is paused. Choose Retry in Permissions." : owner.accessReady ? "Choose which apps stay in the menu bar. Everything else appears in SideTray." : "Finish the permissions in the Permissions tab to choose your apps."
+  start.isHidden = !owner.setupPending; start.isEnabled=owner.accessReady && !owner.visibilityPaused && !owner.wakeRecovery.isActive && !owner.setupReadiness.isActive && !owner.placementBusy
   refresh.isHidden=owner.setupPending; refresh.isEnabled = !owner.placementBusy
-  checkPermissions.title=recovering ? "Check Again" : "Check Permissions"
-  checkPermissions.isEnabled = !owner.checkingPermissions && owner.permissionRecovery.state != .resuming
+  checkPermissions.title = (!needsPermission && (!owner.accessReady || owner.visibilityPaused)) || recovering ? "Retry" : "Check Permissions"
+  checkPermissions.isHidden = needsPermission
+  checkPermissions.isEnabled = !owner.checkingPermissions && !owner.setupReadiness.isActive && owner.permissionRecovery.state != .resuming
   let entries=owner.availableEntries()
   for e in entries { if let bundle=e.app.bundleIdentifier { owner.placement.remember(e.app.localizedName ?? bundle,for:bundle) } }
   let bundles=Set(entries.compactMap { $0.app.bundleIdentifier }).union(owner.placement.names.keys).union(owner.placement.visible).filter { !$0.hasPrefix("com.apple.") && $0 != Bundle.main.bundleIdentifier }.sorted { (owner.placement.names[$0] ?? $0).localizedStandardCompare(owner.placement.names[$1] ?? $1) == .orderedAscending }

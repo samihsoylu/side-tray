@@ -11,7 +11,7 @@ If macOS blocks SideTray with the warning that Apple could not verify the app:
 
 The exception is offered for about an hour after an attempted launch; try opening the installed copy again if it has disappeared. These steps follow [Apple’s macOS 27 instructions](https://support.apple.com/en-gb/guide/mac-help/mh40617/27/mac/27). They apply to the unverified-app warning, not a report of known malware or a damaged app. Do not disable Gatekeeper or strip quarantine attributes.
 
-After launch, SideTray requests Device Control automatically, then opens Full Disk Access. Enable SideTray in each list. If it is missing from Full Disk Access, drag the app icon from SideTray’s setup window into that list. macOS still requires your approval. The DMG also includes **Install and Open.txt** with these instructions.
+Use **Request Access…** beside each missing permission to open its System Settings page. Enable SideTray there and approve with Touch ID or your password if asked. If SideTray is missing from either list, drag the app icon from its setup window into that list. SideTray detects approval without opening another warning or moving you to the next page. The DMG also includes **Install and Open.txt** with these instructions.
 
 ## An update asks for permissions again
 
@@ -19,11 +19,11 @@ Version 0.2.10 introduces a stable signing identity so future updates can retain
 
 SideTray automatically opens **Restore access to SideTray** when it detects missing access after an update.
 
-1. Click **Request Access…** for Device Control and follow the macOS prompt. If no prompt appears, the button changes to **Open System Settings…** as a fallback. For Full Disk Access, open its settings page and enable SideTray.
+1. Click **Request Access…** beside the missing permission, then enable SideTray on that System Settings page.
 2. If SideTray already looks enabled, remove only SideTray from the affected list with **−**, then use **+** to add `/Applications/SideTray.app` again.
 3. Approve any macOS authentication locally. Choose **Quit & Reopen** if macOS asks.
 
-SideTray checks automatically and resumes your saved layout when access is ready. **Check Again** retries a failed recovery. If the screen says menu bar settings are unavailable, follow its status message; that does not necessarily mean a permission is missing.
+SideTray checks automatically and resumes your saved layout when access is ready. **Retry** retries a failed recovery. If the screen says menu bar settings are unavailable, follow its status message; that does not necessarily mean a permission is missing.
 
 Use **Show App in Finder** to locate the running app when adding it. First-time setup says **Set Up SideTray** and does not describe a previous grant.
 
@@ -42,3 +42,9 @@ Versions 0.2.3 and 0.2.4 can redirect the update page while access is missing. V
 ## An update will not download
 
 Try **Check for Updates** again after confirming your connection. A failed signature check leaves the installed app unchanged. Do not install an archive that fails verification. Report the SideTray version, macOS version, and the displayed error; do not include passwords or unrelated personal information.
+
+## Setup cannot finish connecting
+
+After both permissions are granted, SideTray tries to prepare menu-bar recovery up to three times. If it still cannot connect, follow the status message and choose **Retry**. Do not remove working permission grants for a helper or layout error. Choose **Quit & Reopen** if macOS asks when enabling Full Disk Access.
+
+Once you press **Start SideTray**, your setup choices are kept even if applying the first layout fails. SideTray leaves/restores icons visible and shows recovery in Settings; it does not send you through onboarding again.

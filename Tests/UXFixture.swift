@@ -51,7 +51,7 @@ final class UXFixture:NSObject {
   window.contentView?.addSubview(PermissionDragTarget(frame:NSRect(x:155,y:30,width:320,height:120)))
   dragWindow=window; window.makeKeyAndOrderFront(nil)
  }
- @objc func setup() { owner.setupPending=true; owner.permissionRecovery=PermissionRecovery(); owner.fixtureInstalled=true; owner.fixtureControlAccess=false; owner.controlRequestSent=false; owner.menuDataAccess = .permissionRequired; owner.showSettings(destination:"permissions") }
+ @objc func setup() { owner.setupPending=true; owner.permissionRecovery=PermissionRecovery(); owner.fixtureInstalled=true; owner.fixtureControlAccess=false; owner.menuDataAccess = .permissionRequired; owner.showSettings(destination:"permissions") }
  @objc func accessRecovery() {
   owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=false
   owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
@@ -155,41 +155,56 @@ final class UXFixture:NSObject {
   try check(visibleText().contains("Set Up SideTray") && !visibleText().contains("again"),"First setup must never imply previous approval")
   let accessButtons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }.filter { $0.title == "Request Access…" }
   try check(accessButtons.count == 2,"Both missing permissions must use Request Access")
-  var requests=0; var openedPanes:[String]=[]
-  owner.fixtureRequestControl={ requests += 1 }
+  var openedPanes:[String]=[]
   owner.fixtureOpenSettings={ openedPanes.append($0) }
-  owner.openPermissions()
-  try check(requests == 1 && openedPanes.isEmpty,"First click requests natively without racing Settings")
-  owner.openPermissions()
-  try check(requests == 1 && openedPanes == ["Privacy_Accessibility"],"Second click provides Settings fallback without another alert")
-  owner.fixtureControlAccess=true; owner.controlRequestSent=false
-  owner.openPermissions()
-  try check(requests == 1,"Working grants must not request again")
-  owner.openMenuDataPermissions()
-  try check(openedPanes.last == "Privacy_AllFiles")
-  requests=0; openedPanes=[]; owner.controlRequestSent=false; owner.dataSetupOpened=false
-  owner.fixtureControlAccess=false; owner.showSettings(destination:"permissions")
+  owner.openPermissions(); owner.openPermissions(); owner.openMenuDataPermissions()
+  try check(openedPanes == ["Privacy_Accessibility","Privacy_Accessibility","Privacy_AllFiles"],"Explicit buttons must open exactly their permission panes")
+  openedPanes=[]
   owner.advancePermissionSetup(); owner.advancePermissionSetup()
-  try check(requests == 1 && openedPanes.isEmpty,"Setup must request Device Control automatically once, without racing Settings")
+  try check(openedPanes.isEmpty,"Showing setup must never create an OS alert or open Settings")
+  owner.fixtureHelperRunning=false
+  var scheduled=[()->Void](); var delays=[Double](); var attempts=0
+  owner.setupReadiness=WakeRecovery(delays:[0.3,2,5],schedule:{ delay,work in delays.append(delay); scheduled.append(work) })
+  owner.fixtureReadinessCheck={ done in attempts += 1; done() }
+  owner.fixtureControlAccess=true; owner.menuDataAccess = .permissionRequired; owner.menuDataReadable=false
+  owner.advancePermissionSetup()
+  try check(scheduled.isEmpty,"Device Control alone must not start readiness")
+  owner.fixtureControlAccess=false; owner.menuDataAccess = .available; owner.menuDataReadable=true
+  owner.advancePermissionSetup()
+  try check(scheduled.isEmpty,"Full Disk Access alone must not start readiness")
+  try check(!visibleText().contains("recovery helper is not running"),"Partial approval must not show a helper failure")
   owner.fixtureControlAccess=true
-  owner.advancePermissionSetup(); owner.advancePermissionSetup()
-  try check(openedPanes == ["Privacy_AllFiles"],"Advance to Full Disk Access once after control approval")
-  owner.dataSetupOpened=false; owner.showSettings(destination:"general")
   owner.advancePermissionSetup()
-  try check(openedPanes.count == 1,"Never steal focus from Updates")
-  owner.showSettings(destination:"permissions"); owner.settings?.orderOut(nil)
-  owner.advancePermissionSetup()
-  try check(openedPanes.count == 1,"Never reopen Settings after setup is dismissed")
-  owner.fixtureInstalled=false; owner.showSettings(destination:"permissions")
-  owner.advancePermissionSetup()
-  try check(openedPanes.count == 1,"Do not request access for an uninstalled copy")
-  owner.fixtureInstalled=true; owner.menuDataAccess = .available; owner.menuDataReadable=true
-  owner.advancePermissionSetup()
-  try check(openedPanes.count == 1,"Do not request working Full Disk Access")
+  try check(scheduled.count == 1 && openedPanes.isEmpty,"Approval begins readiness without a competing Settings window")
+  scheduled.removeFirst()(); scheduled.removeFirst()(); scheduled.removeFirst()()
+  try check(attempts == 3 && delays == [0.3,2,5] && owner.setupReadiness.state == .exhausted,"Readiness failures must stop after three attempts")
+  for _ in 0..<10 { owner.advancePermissionSetup() }
+  try check(scheduled.isEmpty && attempts == 3,"Polling cannot restart an exhausted readiness budget")
+  try check(visibleText().contains("Your permissions are granted"),"Readiness failure must not request new grants")
+  owner.setupReadiness.cancel(); attempts=0
+  owner.fixtureReadinessCheck={ done in attempts += 1; self.owner.fixtureHelperRunning=attempts == 2; done() }
+  owner.advancePermissionSetup(); scheduled.removeFirst()(); scheduled.removeFirst()()
+  try check(owner.setupReadiness.state == .succeeded && attempts == 2,"Transient helper failure must recover")
+  owner.setupReadiness.cancel(); owner.fixtureHelperRunning=false
+  owner.advancePermissionSetup(); let stale=scheduled.removeFirst(); owner.setupReadiness.cancel(); stale()
+  try check(attempts == 2,"Cancelled readiness must not run stale work")
+  owner.fixtureHelperRunning=true; owner.startupRecoveryComplete=true; owner.recoveryBlocked=false; owner.visibilityPaused=false
+  owner.fixtureInitialLayout={ done in done(false) }
+  let savedSetup=UserDefaults.standard.object(forKey:"setupComplete")
+  owner.finishSetup()
+  try check(!owner.setupPending && UserDefaults.standard.bool(forKey:"setupComplete"),"A first layout failure must retain completed onboarding")
+  try check(owner.visibilityPaused && owner.settings?.title == "SideTray Settings","A failed first start must show Settings with recovery")
+  try check(!SetupProgress.needsSetup(),"Relaunch after a failed start must not re-enter setup")
+  owner.showSettings(destination:"apps")
+  let buttons=views(owner.settings!.contentView!).compactMap { $0 as? NSButton }
+  try check(buttons.filter { ["Start SideTray","Choose Apps…"].contains($0.title) }.allSatisfy { $0.isHiddenOrHasHiddenAncestor },"Completed onboarding buttons must disappear")
+  if let savedSetup { UserDefaults.standard.set(savedSetup,forKey:"setupComplete") } else { UserDefaults.standard.removeObject(forKey:"setupComplete") }
+  owner.fixtureInitialLayout=nil; owner.fixtureReadinessCheck=nil; owner.fixtureOpenSettings=nil
+  owner.setupReadiness.cancel(); owner.visibilityPaused=false
+  owner.showSettings(destination:"permissions")
   let dragIcon=views(owner.settings!.contentView!).compactMap { $0 as? PermissionAppIcon }.first
-  try check(dragIcon?.appURL == Bundle.main.bundleURL,"Drag must identify the current app, not another copy")
-  print("PASS: automatic sequential permission setup, no repeated prompts, update/dismissal guards and exact dragged bundle")
-  owner.fixtureRequestControl=nil; owner.fixtureOpenSettings=nil; owner.controlRequestSent=false
+  try check(dragIcon?.appURL == Bundle.main.bundleURL,"Drag must identify the current app")
+  print("PASS: explicit permission route, bounded readiness retries, cancellation and durable setup after first-layout failure")
   // Production controller/presentation with injected access and resume results.
   // No permission requests, preferences writes, helpers or native icon changes.
   owner.setupPending=false; owner.fixtureInstalled=true; owner.fixtureControlAccess=true
@@ -246,16 +261,16 @@ final class UXFixture:NSObject {
   owner.refreshSettingsUI()
   try check(visibleText().contains("Settings unavailable"))
   try check(visibleText().contains("does not establish that permission is missing"))
-  owner.menuDataAccess = .available; owner.menuDataReadable=true
+  owner.fixtureControlAccess=true; owner.menuDataAccess = .available; owner.menuDataReadable=true
   owner.refreshSettingsUI()
   try check(visibleText().contains("✓ Full Disk Access"),"A missing helper must not be described as a missing permission")
   try check(visibleText().contains("recovery helper is not running"))
   try check(views(owner.settings!.contentView!).contains { ($0 as? NSImageView)?.image != nil },"Settings must show the bundled app icon")
-  owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
+  owner.fixtureControlAccess=nil; owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
   owner.refreshSettingsUI()
   try check(visibleText().contains("Remove SideTray from the affected list"))
   owner.setupPending=true; owner.refreshSettingsUI()
-  try check(visibleText().contains("Missing from the list? Drag this icon into Full Disk Access"))
+  try check(visibleText().contains("Missing from the list? Drag the highlighted icon"))
   owner.setupPending=false; owner.menuDataAccess = .unsupported; owner.refreshSettingsUI()
   try check(visibleText().contains("macOS not supported"))
   owner.recoveryBlocked=true; owner.refreshSettingsUI()
@@ -291,7 +306,7 @@ final class UXFixture:NSObject {
   empty()
   try check(owner.panel.keyboardItems.count == 1 && owner.panel.keyboardItems[0].title == "Manage Apps…")
   owner.panel.orderOut(nil)
-  print("PASS: native request first, Settings fallback, working grants retained, and first-run copy")
+  print("PASS: permission status, working grants retained and first-run copy")
   print("PASS: actual shortcut collision and recovery, Off clears error, explicit pane routing, stable Settings hierarchy")
   print("PASS: production empty/overflow views, no scrollbar, unobscured targets, forward paging and keyboard End")
   print("PASS: permission failures distinct from settings errors, helper failure distinct from grants, first-run and update recovery guidance, bundled Settings icon")
