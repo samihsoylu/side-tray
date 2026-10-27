@@ -18,7 +18,7 @@ struct TrayGeometry {
   let height=min(max(1,anchor.height),max(1,screen.height-2*margin))
   let desired: CGFloat=count == 0 ? 330 : CGFloat(count)*itemWidth(rowHeight:height)+16
   let width=min(available,desired)
-  let bottom=max(screen.minY+margin,min(anchor.minY-height-6,screen.maxY-margin-height))
+  let bottom=max(screen.minY+margin,min(anchor.minY-height-2,screen.maxY-margin-height))
   return CGRect(x:right-width,y:bottom,width:width,height:height)
  }
 }

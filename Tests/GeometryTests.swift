@@ -14,7 +14,7 @@ import CoreGraphics
   assert(long.width == anchor.maxX-screen.minX-12)
   assert(long.maxX == anchor.maxX)
   assert(long.minX >= screen.minX+12 && long.maxX <= screen.maxX-12)
-  assert(short.maxY < anchor.minY)
+  assert(anchor.minY-short.maxY == 2)
   let empty=TrayGeometry.frame(anchor:anchor,screen:screen,count:0)
   assert(empty.width >= 300)
   let external=CGRect(x:-1920,y:-200,width:1920,height:1080)
