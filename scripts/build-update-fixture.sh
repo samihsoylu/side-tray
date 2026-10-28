@@ -8,7 +8,7 @@ if pgrep -x UpdateFixture >/dev/null; then
 fi
 rm -rf "$fixture_root/installed" "$fixture_root/release" "$fixture_root/dmg-stage"
 mkdir -p "$fixture_root"
-xcrun swiftc -target arm64-apple-macos26.0 -D SIDETRAY_UPDATE_FIXTURE -F build/dependencies/Sparkle-2.10.0 -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/UpdatePolicy.swift Sources/Updates.swift Tests/UpdateFixture.swift -o "$fixture_root/fixture"
+xcrun swiftc -target arm64-apple-macos26.0 -D SIDETRAY_UPDATE_FIXTURE -F build/dependencies/Sparkle-2.10.0 -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/PlatformCompatibility.swift Sources/UpdatePolicy.swift Sources/Updates.swift Tests/UpdateFixture.swift -o "$fixture_root/fixture"
 # A disposable key is used only for the local test feed and fixture bundles.
 xcrun swift -target arm64-apple-macos26.0 -e 'import CryptoKit; import Foundation; let k=Curve25519.Signing.PrivateKey(); let d=URL(fileURLWithPath:CommandLine.arguments[1]); try k.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-key")); try k.publicKey.rawRepresentation.base64EncodedData().write(to:d.appendingPathComponent("test-public"))' "$fixture_root"
 chmod 600 "$fixture_root/test-key"

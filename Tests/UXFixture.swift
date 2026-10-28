@@ -32,6 +32,7 @@ final class UXFixture:NSObject {
  var dragWindow:NSWindow?
  override init() {
   super.init()
+  owner.fixtureOSMajor=27 // Controller regression cases model the supported backend on any host.
   owner.setupPending=true
   owner.panel=TrayPanel(contentRect:NSRect(x:850,y:650,width:330,height:33),styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false)
   controls=NSWindow(contentRect:NSRect(x:100,y:200,width:240,height:260),styleMask:[.titled,.closable],backing:.buffered,defer:false)
@@ -86,6 +87,12 @@ final class UXFixture:NSObject {
   owner.refreshSettingsUI()
   try check(owner.settings?.contentView === original)
   func views(_ root:NSView) -> [NSView] { [root]+root.subviews.flatMap { views($0) } }
+  func visibleButtons() -> [String] {
+   views(owner.settings!.contentView!).compactMap { view in
+    guard let button=view as? NSButton,!button.isHiddenOrHasHiddenAncestor else { return nil }
+    return button.title
+   }
+  }
   func visibleText() -> String {
    views(owner.settings!.contentView!).compactMap { view in
     guard let field=view as? NSTextField,!field.isHiddenOrHasHiddenAncestor else { return nil }
@@ -327,6 +334,29 @@ final class UXFixture:NSObject {
   try check(visibleText().contains("Missing from the list? Drag the highlighted icon"))
   owner.setupPending=false; owner.menuDataAccess = .unsupported; owner.refreshSettingsUI()
   try check(visibleText().contains("macOS not supported"))
+  for major in [26,28] {
+   owner.fixtureOSMajor=major; owner.fixtureControlAccess=false; owner.setupPending=true
+   var openedPane=false,restored=false
+   owner.fixtureOpenSettings={ _ in openedPane=true }; owner.fixtureRestoreVisibility={ restored=true }
+   owner.probeSetupPermissions(); owner.openPermissions(); owner.openMenuDataPermissions(); owner.restoreVisibility()
+   try check(!openedPane && !restored,"Unsupported OS cannot request access or restore native settings")
+   try check(owner.menuDataAccess == .unsupported && !owner.accessReady && owner.setupPending,"Unsupported OS preserves onboarding without allowing writes")
+   try check(!owner.updatePermissionRecovery(),"Unsupported is not permission recovery")
+   owner.showSettings(destination:"permissions")
+   try check(owner.settings!.title == "SideTray Settings")
+   try check(visibleText().contains(PlatformCompatibility.unsupportedMessage))
+   try check(!visibleButtons().contains("Request Access…") && !visibleButtons().contains("Choose Apps…"))
+   owner.showSettings(destination:"general")
+   try check(visibleButtons().contains("Check for Updates…"),"Maintenance remains reachable on unsupported OS")
+   owner.setupPending=false; owner.fixtureControlAccess=true; owner.fixtureHelperRunning=true
+   owner.menuDataReadable=true; owner.startupRecoveryComplete=true; owner.recoveryBlocked=false
+   var applied:Bool?
+   owner.applyVisibility { applied=$0 }
+   try check(applied == false && !owner.accessReady,"Granted permissions cannot enable an untested backend")
+   try check(owner.applicationShouldTerminate(NSApp) == .terminateNow,"Unknown OS must permit quitting for a compatible update")
+  }
+  owner.fixtureOSMajor=27; owner.fixtureOpenSettings=nil; owner.fixtureRestoreVisibility=nil
+  owner.fixtureControlAccess=nil; owner.fixtureHelperRunning=false; owner.menuDataReadable=false; owner.setupPending=false; owner.showSettings(destination:"permissions")
   owner.recoveryBlocked=true; owner.refreshSettingsUI()
   try check(visibleText().contains("Recovery needs attention"))
   var blockedResult:Bool?

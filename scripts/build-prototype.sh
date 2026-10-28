@@ -17,10 +17,11 @@ mkdir -p "$task_bundle/Contents/MacOS" "$task_bundle/Contents/Resources" build/a
 cp LICENSE "$task_bundle/Contents/Resources/LICENSE.txt"
 cp Assets/SideTray.icns "$task_bundle/Contents/Resources/SideTray.icns"
 cp ThirdParty/Sparkle-LICENSE.txt "$task_bundle/Contents/Resources/Sparkle-LICENSE.txt"
+task_minimum=$(python3 -c 'import json; print(json.load(open("Compatibility.json"))["deploymentTarget"])')
 task_sdk="$(xcrun --sdk macosx --show-sdk-path)"
 for task_arch in arm64 x86_64; do
- xcrun clang -fobjc-arc -isysroot "$task_sdk" -target "${task_arch}-apple-macos26.0" -c Sources/NativeVisibility.m -o "build/architectures/Visibility-${task_arch}.o"
- xcrun swiftc -F "$task_framework" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks -import-objc-header Sources/NativeVisibility.h -target "${task_arch}-apple-macos26.0" Sources/SideTray.swift Sources/TrayGeometry.swift Sources/PlacementStore.swift Sources/ShortcutChoice.swift Sources/PermissionRecovery.swift Sources/WakeRecovery.swift Sources/Shortcut.swift Sources/MenuActivation.swift Sources/MenuSurfaceWatch.swift Sources/Settings.swift Sources/MenuBarLayout.swift Sources/AppIdentity.swift Sources/MenuSwitches.swift Sources/VisibilityPipeline.swift Sources/UpdatePolicy.swift Sources/Updates.swift "build/architectures/Visibility-${task_arch}.o" -o "build/architectures/SideTray-${task_arch}"
+ xcrun clang -fobjc-arc -isysroot "$task_sdk" -target "${task_arch}-apple-macos${task_minimum}" -c Sources/NativeVisibility.m -o "build/architectures/Visibility-${task_arch}.o"
+ xcrun swiftc -F "$task_framework" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks -import-objc-header Sources/NativeVisibility.h -target "${task_arch}-apple-macos${task_minimum}" Sources/SideTray.swift Sources/TrayGeometry.swift Sources/PlacementStore.swift Sources/ShortcutChoice.swift Sources/PermissionRecovery.swift Sources/WakeRecovery.swift Sources/Shortcut.swift Sources/MenuActivation.swift Sources/MenuSurfaceWatch.swift Sources/Settings.swift Sources/MenuBarLayout.swift Sources/AppIdentity.swift Sources/PlatformCompatibility.swift Sources/MenuSwitches.swift Sources/VisibilityPipeline.swift Sources/UpdatePolicy.swift Sources/Updates.swift "build/architectures/Visibility-${task_arch}.o" -o "build/architectures/SideTray-${task_arch}"
 done
 xcrun lipo -create build/architectures/SideTray-arm64 build/architectures/SideTray-x86_64 -output "$task_bundle/Contents/MacOS/SideTray"
 cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
@@ -51,6 +52,7 @@ cat > "$task_bundle/Contents/Info.plist" <<'PLIST'
 <key>SUSignedFeedFailureExpirationInterval</key><integer>0</integer>
 </dict></plist>
 PLIST
+/usr/libexec/PlistBuddy -c "Set LSMinimumSystemVersion $task_minimum" "$task_bundle/Contents/Info.plist"
 mkdir -p "$task_bundle/Contents/Frameworks"
 ditto "$task_framework/Sparkle.framework" "$task_bundle/Contents/Frameworks/Sparkle.framework"
 if [ "${SIDETRAY_ADHOC:-0}" = 1 ]; then

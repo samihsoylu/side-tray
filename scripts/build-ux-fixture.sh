@@ -37,7 +37,7 @@ cat > "$fixture_bundle/Contents/Info.plist" <<PLIST
 <key>CFBundleExecutable</key><string>SideTrayUXFixture</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>${SIDETRAY_PERMISSION_BUILD:-1}</string>
-<key>LSMinimumSystemVersion</key><string>27.0</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
 </dict></plist>
 PLIST
 mkdir -p "$fixture_bundle/Contents/Frameworks"

@@ -8,10 +8,10 @@ build/tests/geometry
 xcrun swiftc -target arm64-apple-macos26.0 Sources/PlacementStore.swift Tests/PlacementTests.swift -o build/tests/placement
 build/tests/placement
 
-xcrun swiftc -target arm64-apple-macos26.0 Sources/MenuSwitches.swift Tests/MenuSwitchTests.swift -o build/tests/menu-switches
+xcrun swiftc -target arm64-apple-macos26.0 Sources/PlatformCompatibility.swift Sources/MenuSwitches.swift Tests/MenuSwitchTests.swift -o build/tests/menu-switches
 build/tests/menu-switches
 
-xcrun swiftc -target arm64-apple-macos26.0 Sources/MenuSwitches.swift Tests/RecoveryTests.swift -o build/tests/recovery
+xcrun swiftc -target arm64-apple-macos26.0 Sources/PlatformCompatibility.swift Sources/MenuSwitches.swift Tests/RecoveryTests.swift -o build/tests/recovery
 build/tests/recovery
 
 xcrun swiftc -target arm64-apple-macos26.0 Sources/MenuSurfaceWatch.swift Tests/MenuSurfaceTests.swift -o build/tests/menu-surfaces
@@ -31,3 +31,7 @@ build/tests/permission-recovery
 
 xcrun swiftc -target arm64-apple-macos26.0 Sources/WakeRecovery.swift Tests/WakeRecoveryTests.swift -o build/tests/wake-recovery
 build/tests/wake-recovery
+
+xcrun swiftc -target arm64-apple-macos26.0 Sources/PlatformCompatibility.swift Tests/CompatibilityTests.swift -o build/tests/compatibility
+build/tests/compatibility
+python3 scripts/test-compatibility.py

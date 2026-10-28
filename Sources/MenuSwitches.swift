@@ -2,13 +2,15 @@ import Foundation
 import Darwin
 import CoreFoundation
 
-enum MenuSwitchError:Error { case unexpectedFormat,commandFailed,concurrentChange,lockBusy,invalidJournal,unsupportedSystem }
+enum MenuSwitchError:Error { case unexpectedFormat,commandFailed,concurrentChange,lockBusy,invalidJournal,incompatibleJournal,unsupportedSystem }
 
 func recoveryExplanation(_ error:Error) -> String {
  if MenuDataAccess.failure(error) == .permissionRequired { return "Restore Full Disk Access in Permissions, then try again." }
  switch error {
  case MenuSwitchError.unexpectedFormat, MenuSwitchError.unsupportedSystem:
   return "This macOS menu bar format is not supported. The recovery record has been kept; an app update is needed."
+ case MenuSwitchError.incompatibleJournal:
+  return "The recovery record belongs to another macOS backend or format. It has been kept without changing menu bar settings. A compatible update is needed."
  case MenuSwitchError.invalidJournal:
   return "The recovery record could not be read safely. It has been kept for recovery; no new icons will be hidden."
  case MenuSwitchError.concurrentChange, MenuSwitchError.lockBusy:
@@ -117,7 +119,10 @@ final class MenuSwitches {
  private let osMajor:Int
  private var issueURL:URL { journal.deletingLastPathComponent().appendingPathComponent("recovery-error.txt") }
  private struct Journal:Codable {
-  var version:Int?=1 // Missing means the previous beta's format.
+  var version:Int?=2
+  var backend:String?=PlatformCompatibility.Backend.controlCenter27.rawValue
+  var osMajor:Int?=27
+  var schema:String?=PlatformCompatibility.journalSchema
   var original:[String:Bool]=[:]
   var written:[String:Bool]=[:]
  }
@@ -126,7 +131,7 @@ final class MenuSwitches {
   journal=journalURL ?? Self.supportDirectory.appendingPathComponent("menu-visibility.json")
   self.osMajor=osMajor; readOverride=readDomain; writeOverride=writeDomain
  }
- static func supports(major:Int) -> Bool { major == 27 }
+ static func supports(major:Int) -> Bool { PlatformCompatibility.backend(for:major) == .controlCenter27 }
  private func checkCompatibility() throws {
   guard Self.supports(major:osMajor) else { throw MenuSwitchError.unsupportedSystem }
  }
@@ -212,16 +217,28 @@ final class MenuSwitches {
   return try work()
  }
  private func loadJournal() throws -> Journal {
+  try checkCompatibility()
   if !FileManager.default.fileExists(atPath:journal.path) { return Journal() }
   do {
    let data=try Data(contentsOf:journal)
    guard data.count<=1024*1024 else { throw MenuSwitchError.invalidJournal }
-   let record=try JSONDecoder().decode(Journal.self,from:data)
-   guard record.version == nil || record.version == 1,
+   var record=try JSONDecoder().decode(Journal.self,from:data)
+   guard record.version == nil || record.version == 1 || record.version == 2,
          Set(record.original.keys) == Set(record.written.keys),
          record.original.keys.allSatisfy({ !$0.isEmpty && !$0.hasPrefix("com.apple.") }) else { throw MenuSwitchError.invalidJournal }
+   if record.version == 2 {
+    guard record.backend == PlatformCompatibility.backend(for:osMajor)?.rawValue,
+          record.osMajor == osMajor, record.schema == PlatformCompatibility.journalSchema else { throw MenuSwitchError.incompatibleJournal }
+   } else {
+    // Legacy records were only written by the macOS 27 backend. Upgrade on the
+    // next save, never infer compatibility with a different OS or schema.
+    guard record.backend == nil,record.osMajor == nil,record.schema == nil else { throw MenuSwitchError.incompatibleJournal }
+    record.version=2; record.backend=PlatformCompatibility.Backend.controlCenter27.rawValue
+    record.osMajor=osMajor; record.schema=PlatformCompatibility.journalSchema
+   }
    return record
-  } catch { throw MenuSwitchError.invalidJournal }
+  } catch MenuSwitchError.incompatibleJournal { throw MenuSwitchError.incompatibleJournal }
+  catch { throw MenuSwitchError.invalidJournal }
  }
  private func save(_ record:Journal) throws {
   try JSONEncoder().encode(record).write(to:journal,options:.atomic)
@@ -231,9 +248,9 @@ final class MenuSwitches {
   try locked {
    let data=try read(); let current=try MenuSwitchCodec.states(data)
    guard desired.keys.allSatisfy({ !$0.hasPrefix("com.apple.") && current[$0] != nil }) else { throw MenuSwitchError.unexpectedFormat }
+   let previous=try loadJournal()
    let changes=desired.filter { current[$0.key] != $0.value }
    guard !changes.isEmpty else { return }
-   let previous=try loadJournal()
    var record=previous
    for (id,state) in changes {
     if record.original[id] == nil { record.original[id]=current[id] }

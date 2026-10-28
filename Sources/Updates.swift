@@ -83,7 +83,7 @@ final class Updates:NSObject,SPUUpdaterDelegate,URLSessionDownloadDelegate {
   #if SIDETRAY_UPDATE_FIXTURE
   return true
   #else
-  return ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 27 && Bundle.main.bundleURL.deletingLastPathComponent().path == "/Applications"
+  return PlatformCompatibility.canUpdate(bundleURL:Bundle.main.bundleURL)
   #endif
  }
  private func restoreDownload() {

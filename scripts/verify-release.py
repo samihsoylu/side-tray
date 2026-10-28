@@ -2,6 +2,7 @@
 """Verify the signed feed, DMG and mounted app without launching or installing it."""
 from pathlib import Path
 import plistlib
+import json
 import subprocess
 import sys
 import tempfile
@@ -19,8 +20,9 @@ item = next(item for item in items if item.findtext(namespace + 'shortVersionStr
 enclosure = item.find('enclosure')
 assert enclosure.attrib['url'] == f'https://github.com/samihsoylu/side-tray/releases/download/v{version}/{archive.name}'
 assert int(enclosure.attrib['length']) == archive.stat().st_size
-assert item.findtext(namespace + 'minimumSystemVersion') == '27.0'
-assert item.findtext(namespace + 'maximumSystemVersion') == '27.999'
+policy = json.loads(Path('Compatibility.json').read_text())
+assert item.findtext(namespace + 'minimumSystemVersion') == policy['distributionMinimum']
+assert item.findtext(namespace + 'maximumSystemVersion') == policy['distributionMaximum']
 assert item.findtext(namespace + 'channel') == 'beta'
 subprocess.run([signer, '--account', 'io.sidetray.updates', '--verify', str(archive), enclosure.attrib[namespace + 'edSignature']], check=True)
 subprocess.run(['hdiutil', 'verify', '-quiet', str(archive)], check=True)
@@ -36,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix='sidetray-release-check-') as mount:
         assert info['SUFeedURL'] == 'https://raw.githubusercontent.com/samihsoylu/side-tray/main/appcast-dmg.xml'
         assert info['SUPublicEDKey'] == 'r7UuuKkGu2L7nTKNXnACxbidTszFTK5hkGmAygh0tS0='
         assert info['SURequireSignedFeed'] and info['SUVerifyUpdateBeforeExtraction']
+        assert info['LSMinimumSystemVersion'] == policy['deploymentTarget']
         assert not info['SUAutomaticallyUpdate'] and not info['SUAllowsAutomaticUpdates']
         assert (root / 'Applications').is_symlink()
         assert (root / 'Applications').readlink() == Path('/Applications')

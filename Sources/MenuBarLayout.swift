@@ -9,7 +9,7 @@ struct BarSlot {
 }
 
 func barSlots() -> [BarSlot] {
- guard AXIsProcessTrusted(),let agent=NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.MenuBarAgent").first else { return [] }
+ guard PlatformCompatibility.currentBackend == .controlCenter27,AXIsProcessTrusted(),let agent=NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.MenuBarAgent").first else { return [] }
  let root=AXUIElementCreateApplication(agent.processIdentifier)
  AXUIElementSetMessagingTimeout(root,0.1)
  var slots=[BarSlot]()

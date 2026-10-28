@@ -309,6 +309,21 @@ final class SettingsUI:NSObject {
   checkPermissions.title = (!needsPermission && (!owner.accessReady || owner.visibilityPaused)) || recovering ? "Retry" : "Check Permissions"
   checkPermissions.isHidden = needsPermission
   checkPermissions.isEnabled = !owner.checkingPermissions && !owner.setupReadiness.isActive && owner.permissionRecovery.state != .resuming
+  if !owner.menuManagementSupported {
+   window.title="SideTray Settings"
+   navigation.setEnabled(false,forSegment:0)
+   if selected == "apps" { select("permissions") }
+   setupTitle.stringValue="macOS compatibility"
+   setupDescription.isHidden=false; setupDescription.stringValue=PlatformCompatibility.unsupportedMessage
+   controlState.isHidden=true; controlOpen.isHidden=true; controlHelp.isHidden=true
+   dataState.stringValue="Menu bar management unavailable"
+   dataHelp.stringValue=owner.menuSwitches.hasRecoveryRecord
+    ? "A recovery record from an earlier system is saved. SideTray cannot safely restore it on this macOS version. If icons remain hidden, use macOS menu bar settings to show them."
+    : "SideTray will leave your menu bar unchanged. Additional permissions will not enable support."
+   dataOpen.isHidden=true; permissionDragRow.isHidden=true; revealApp.isHidden=true
+   accessHelp.isHidden=true; details.isHidden=true; permissionDetail.isHidden=true
+   next.isHidden=true; start.isHidden=true; setupHelp.isHidden=true; refresh.isHidden=true; checkPermissions.isHidden=true
+  } else { controlState.isHidden=false; controlHelp.isHidden=false; details.isHidden=false }
   let entries=owner.availableEntries()
   for e in entries { if let bundle=e.app.bundleIdentifier { owner.placement.remember(e.app.localizedName ?? bundle,for:bundle) } }
   let bundles=Set(entries.compactMap { $0.app.bundleIdentifier }).union(owner.placement.names.keys).union(owner.placement.visible).filter { !$0.hasPrefix("com.apple.") && $0 != Bundle.main.bundleIdentifier }.sorted { (owner.placement.names[$0] ?? $0).localizedStandardCompare(owner.placement.names[$1] ?? $1) == .orderedAscending }

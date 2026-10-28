@@ -149,6 +149,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  var fixtureExternalMenuOpen:Bool?
  var fixtureOpenSettings:((String)->Void)?
  var fixtureCheckPermissions:(()->Void)?
+ var fixtureOSMajor:Int?
  var fixtureControlAccess:Bool?
  var fixtureInstalled:Bool?
  var fixtureHelperRunning:Bool?
@@ -176,7 +177,13 @@ final class Controller: NSObject, NSApplicationDelegate {
   #endif
   return recoveryWatcher?.isRunning == true
  }
- var accessReady:Bool { controlAccessGranted && isInstalled && menuDataReadable && startupRecoveryComplete && !recoveryBlocked && recoveryHelperRunning }
+ var menuManagementSupported:Bool {
+  #if SIDETRAY_UX_FIXTURE
+  if let major=fixtureOSMajor { return PlatformCompatibility.backend(for:major) != nil }
+  #endif
+  return PlatformCompatibility.currentBackend != nil
+ }
+ var accessReady:Bool { menuManagementSupported && controlAccessGranted && isInstalled && menuDataReadable && startupRecoveryComplete && !recoveryBlocked && recoveryHelperRunning }
  var canManageVisibility:Bool { accessReady && !visibilityPaused && !wakeRecovery.isActive && !setupPending && !permissionRecovery.isActive }
  func applicationDidFinishLaunching(_ notification: Notification) {
   if let url=Bundle.main.url(forResource:"SideTray",withExtension:"icns"),let icon=NSImage(contentsOf:url) {
@@ -255,6 +262,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  func installGlobalMonitor() {
   if let monitor { NSEvent.removeMonitor(monitor) }; monitor=nil
+  guard menuManagementSupported else { return }
   var mask:NSEvent.EventTypeMask=[.leftMouseDown,.rightMouseDown,.leftMouseUp,.rightMouseUp]
   if trusted { mask.insert(.keyDown) }
   monitor=NSEvent.addGlobalMonitorForEvents(matching:mask) { [weak self] event in
@@ -440,7 +448,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   #if SIDETRAY_UX_FIXTURE
   return [] // Presentation tests must never query other apps through Accessibility.
   #else
-  guard controlAccessGranted else { return [] }
+  guard menuManagementSupported,controlAccessGranted else { return [] }
   var found=entries()
   for bundle in hiddenBundles {
    guard let app=NSRunningApplication.runningApplications(withBundleIdentifier:bundle).first,
@@ -495,6 +503,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  private func applyVisibilityNow(reveal:String?,wakeToken:Int?,completion:@escaping(Bool)->Void) {
+  guard menuManagementSupported else { completion(false); return }
   if let token=wakeToken {
    guard wakeRecovery.accepts(token) else { completion(false); return }
   } else if wakeRecovery.isActive { completion(false); return }
@@ -595,6 +604,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   refreshSettingsUI()
  }
  func restoreVisibility() {
+  guard menuManagementSupported else { return }
   #if SIDETRAY_UX_FIXTURE
   if let restore=fixtureRestoreVisibility { restore(); return }
   #endif
@@ -645,9 +655,10 @@ final class Controller: NSObject, NSApplicationDelegate {
   #endif
   DispatchQueue.main.asyncAfter(deadline:.now()+0.4,execute:work)
  }
- @objc func openMenuDataPermissions() { openPrivacySettings("Privacy_AllFiles") }
+ @objc func openMenuDataPermissions() { guard menuManagementSupported else { return }; openPrivacySettings("Privacy_AllFiles") }
  // Permission checks never display an alert or open another app.
  func probeSetupPermissions() {
+  guard menuManagementSupported else { checkMenuDataAccess(); return }
   guard setupPending,!suspended,!terminating,!checkingPermissions,!setupReadiness.isActive else { return }
   checkingPermissions=true
   visibilityQueue.async {
@@ -661,7 +672,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  func advancePermissionSetup() {
-  guard setupPending,!suspended,!terminating,!wakeRecovery.isActive else { return }
+  guard menuManagementSupported,setupPending,!suspended,!terminating,!wakeRecovery.isActive else { return }
   let granted=controlAccessGranted && menuDataAccess == .available
   if granted != setupPermissionsWereReady {
    setupPermissionsWereReady=granted; setupReadiness.cancel()
@@ -692,7 +703,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  // Returns true while access recovery owns resuming the saved layout.
  @discardableResult func updatePermissionRecovery() -> Bool {
-  guard !wakeRecovery.isActive else { return false }
+  guard menuManagementSupported,!wakeRecovery.isActive else { return false }
   let action=permissionRecovery.evaluate(setupPending:setupPending,installed:isInstalled,
    controlGranted:controlAccessGranted,dataPermissionMissing:menuDataAccess == .permissionRequired,ready:accessReady && !visibilityPaused && !wakeRecovery.isActive)
   switch action {
@@ -725,6 +736,11 @@ final class Controller: NSObject, NSApplicationDelegate {
  }
  @objc func checkMenuDataAccess() { checkMenuDataAccess(completion:nil) }
  func checkMenuDataAccess(completion:(()->Void)?) {
+  guard menuManagementSupported else {
+   menuDataAccess = .unsupported; menuDataReadable=false; permissionCheckRequested=false
+   visibilityMessage=PlatformCompatibility.unsupportedMessage
+   refreshSettingsUI(); completion?(); return
+  }
   guard !checkingPermissions,!terminating else { completion?(); return }; checkingPermissions=true
   let recover = !startupRecoveryComplete || recoveryBlocked || visibilityPaused
   visibilityQueue.async {
@@ -932,7 +948,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  func handleWake() {
   guard suspended else { return } // Duplicate wake notifications do not reset the budget.
   suspended=false
-  guard !terminating,!setupPending,isInstalled else { return }
+  guard menuManagementSupported,!terminating,!setupPending,isInstalled else { return }
   visibilityMessage="Waiting for the menu bar after wake…"
   wakeRecovery.start(attempt:{ [weak self] token,done in
    self?.attemptWakeRecovery(token:token,completion:done)
@@ -1003,7 +1019,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   observe(workspace,NSWorkspace.activeSpaceDidChangeNotification) { [weak self] in self?.dismissTray() }
   observe(NotificationCenter.default,NSApplication.didChangeScreenParametersNotification) { [weak self] in self?.dismissTray(); self?.trayDisplay=nil; self?.activation.cancel() }
   permissionTimer=Timer.scheduledTimer(withTimeInterval:3,repeats:true) { [weak self] _ in
-   guard let self else { return }
+   guard let self,self.menuManagementSupported else { return }
    self.scheduleControlArrangement()
    if let watcher=self.recoveryWatcher,!watcher.isRunning,!self.recoveryBlocked {
     self.recoveryBlocked=true; self.restoreVisibility()
@@ -1056,6 +1072,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  @objc func openStrip() { toggle() }
  @objc func refreshSettings() { refreshSettingsUI() }
  @objc func openPermissions() {
+  guard menuManagementSupported else { return }
   guard isInstalled else { showSettings(destination:"permissions"); return }
   openPrivacySettings("Privacy_Accessibility")
  }
@@ -1078,6 +1095,8 @@ final class Controller: NSObject, NSApplicationDelegate {
   refreshSettingsUI()
  }
  func applicationShouldTerminate(_ sender:NSApplication) -> NSApplication.TerminateReply {
+  // No backend has run on this OS. Preserve any older journal for a compatible update.
+  guard menuManagementSupported else { return .terminateNow }
   guard !terminating else { return .terminateLater }
   terminating=true; suspended=true; pendingTrayOpen=false; controlArrangementPending=false; wakeRecovery.cancel(); setupReadiness.cancel()
   stopMenuWatch(); dismissTray(); activation.cancel(); ordering.cancel()

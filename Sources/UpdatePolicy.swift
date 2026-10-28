@@ -40,7 +40,7 @@ enum UpdateFailure:Error,LocalizedError {
   case .invalidSignature: return "The update failed its security check. Your installed app is unchanged."
   case .releaseChanged: return "The release changed. Check again to download and approve the new version."
   case .staleFeed: return "The update feed does not match the downloaded version. Try installing again later."
-  case .unsupported: return "Updates require the installed Applications copy on a supported macOS version."
+  case .unsupported: return "Updates require the installed copy in Applications."
   case .download: return "The update could not be downloaded. Check your connection and try again."
   }
  }

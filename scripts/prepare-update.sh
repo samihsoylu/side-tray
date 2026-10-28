@@ -26,20 +26,8 @@ mkdir -p "$release_dir"
 sh scripts/package-dmg.sh "$release_bundle" "$release_dir/SideTray-$release_version.dmg"
 if [ -f appcast-dmg.xml ]; then cp appcast-dmg.xml "$release_dir/appcast.xml"; fi
 build/dependencies/Sparkle-2.10.0/bin/generate_appcast -o "$release_dir/appcast.xml" --account io.sidetray.updates --channel beta --maximum-deltas 0 --download-url-prefix "https://github.com/samihsoylu/side-tray/releases/download/v$release_version/" "$release_dir"
-# Bound the supported major version, even on a future system that can run the binary.
-python3 - "$release_dir/appcast.xml" <<'PY'
-import sys,xml.etree.ElementTree as ET
-p=sys.argv[1]; ns='http://www.andymatuschak.org/xml-namespaces/sparkle'; ET.register_namespace('sparkle',ns)
-tree=ET.parse(p)
-description=tree.find('./channel/description')
-if description is None: description=ET.SubElement(tree.find('./channel'),'description')
-description.text='SideTray beta updates for macOS.'
-for item in tree.findall('./channel/item'):
- element=item.find('{'+ns+'}maximumSystemVersion')
- if element is None: element=ET.SubElement(item,'{'+ns+'}maximumSystemVersion')
- element.text='27.999'
-tree.write(p,encoding='utf-8',xml_declaration=True)
-PY
+# Preserve older releases and their original OS ranges before signing the feed.
+python3 scripts/merge-appcast.py "$release_dir/appcast.xml" appcast-dmg.xml "$release_version"
 build/dependencies/Sparkle-2.10.0/bin/sign_update --account io.sidetray.updates "$release_dir/appcast.xml"
 build/dependencies/Sparkle-2.10.0/bin/sign_update --account io.sidetray.updates --verify "$release_dir/appcast.xml"
 echo "Prepared $release_dir (not published). Upload the DMG first, then replace appcast-dmg.xml with this signed feed."

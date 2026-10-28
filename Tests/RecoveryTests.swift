@@ -62,6 +62,26 @@ final class FakeDomain {
   try normal.apply(["app.a":false,"app.b":true])
   try check(normal.hasRecoveryRecord,"Must journal before writes")
   try check(try fake.states() == ["app.a":false,"app.b":true,"com.apple.system":true],"Apply flags")
+  let recordURL=root.appendingPathComponent("normal/menu-visibility.json")
+  let recorded=try Data(contentsOf:recordURL)
+  let metadata=try JSONSerialization.jsonObject(with:recorded) as! [String:Any]
+  try check(metadata["version"] as? Int == 2 && metadata["osMajor"] as? Int == 27,"Recovery records identify their OS")
+  try check(metadata["backend"] as? String == "controlcenter27-v1" && metadata["schema"] as? String == PlatformCompatibility.journalSchema,"Recovery records identify backend and schema")
+  for major in [26,28] {
+   let foreign=store(fake,"normal",major:major), reads=fake.reads, writes=fake.writes
+   try rejects { try foreign.restore() }; try rejects { try foreign.apply(["app.a":false]) }
+   try check(fake.reads == reads && fake.writes == writes,"Unknown OS must not access native settings")
+   try check(try Data(contentsOf:recordURL) == recorded,"Unknown OS retains recovery evidence")
+  }
+  for (key,value) in [("backend","other-backend"),("schema","future-format"),("osMajor",26)] as [(String,Any)] {
+   var incompatible=metadata; incompatible[key]=value
+   let bytes=try JSONSerialization.data(withJSONObject:incompatible)
+   try bytes.write(to:recordURL)
+   let writes=fake.writes
+   try rejects { try normal.restore() }; try rejects { try normal.apply(["app.a":false]) }
+   try check(fake.writes == writes && (try Data(contentsOf:recordURL)) == bytes,"Foreign records retained, including on no-op apply")
+  }
+  try recorded.write(to:recordURL)
   try normal.restore()
   try check(try fake.states()["app.a"] == true,"Restore original")
   try check(!normal.hasRecoveryRecord,"Clear journal after verified restoration")
