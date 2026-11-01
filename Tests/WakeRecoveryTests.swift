@@ -37,6 +37,29 @@ final class Clock {
   wake.cancel(); wake.start(attempt:attempt,finished:{ _ in fatalError("Cancelled delay completed") })
   let before=calls; wake.cancel(); clock.fire()
   precondition(calls == before && !wake.isActive)
+  // Readiness skips can outlast the old three-check window without spending
+  // a real layout attempt. They still stop after a separate finite budget.
+  let settlingClock=Clock(), settling=WakeRecovery(maxDeferrals:5,schedule: { delay,work in settlingClock.schedule(delay,work) })
+  var results=[Bool](), evaluated:((WakeRecovery.Result)->Void)?
+  settling.startEvaluating(attempt:{ _,done in evaluated=done },finished:{ results.append($0) })
+  for _ in 0..<4 { settlingClock.fire(); evaluated?(.deferred) }
+  precondition(settling.attempts == 0 && settling.deferrals == 4 && settling.isActive && results.isEmpty)
+  settlingClock.fire(); evaluated?(.succeeded)
+  precondition(settling.attempts == 1 && results == [true])
+  settling.cancel(); results=[]
+  settling.startEvaluating(attempt:{ _,done in evaluated=done },finished:{ results.append($0) })
+  for _ in 0..<5 { settlingClock.fire(); evaluated?(.deferred) }
+  precondition(settling.attempts == 0 && results == [false] && settlingClock.queued.isEmpty)
+  settling.cancel(); results=[]
+  settling.startEvaluating(attempt:{ _,done in evaluated=done },finished:{ results.append($0) })
+  settlingClock.fire(); let duplicate=evaluated!; duplicate(.deferred); duplicate(.failed)
+  precondition(settling.attempts == 0 && settlingClock.queued.count == 1)
+  settlingClock.fire(); evaluated?(.failed)
+  settlingClock.fire(); evaluated?(.deferred)
+  settlingClock.fire(); evaluated?(.failed)
+  settlingClock.fire(); evaluated?(.failed)
+  precondition(settling.attempts == 3 && results == [false] && settlingClock.queued.isEmpty)
+  print("PASS: readiness deferrals preserve real-attempt budget; settling cap, mixed failures and duplicate callbacks")
   print("PASS: delayed wake recovery, three-attempt cap, no overlapping attempts, duplicate-event/completion guards, success stop and stale callback cancellation")
  }
 }

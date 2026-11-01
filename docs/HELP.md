@@ -48,3 +48,7 @@ Try **Check for Updates** again after confirming your connection. A failed signa
 After both permissions are granted, SideTray tries to prepare menu-bar recovery up to three times. If it still cannot connect, follow the status message and choose **Retry**. Do not remove working permission grants for a helper or layout error. Choose **Quit & Reopen** if macOS asks when enabling Full Disk Access.
 
 Once you press **Start SideTray**, your setup choices are kept even if applying the first layout fails. SideTray leaves/restores icons visible and shows recovery in Settings; it does not send you through onboarding again.
+
+### Recovery logs
+
+SideTray keeps a small local diagnostic history in `~/Library/Application Support/SideTray/Diagnostics/`: `recovery.jsonl` and `recovery.previous.jsonl`. Each file is capped at 256 KiB. The records contain timestamps, recovery-cycle/attempt numbers, fixed reasons (such as an open popup or a missing menu-bar button), readiness flags and icon counts. They exclude app names, bundle identifiers, menu contents and raw error messages. Nothing is uploaded automatically. If a wake issue recurs, these files can help identify which check blocked recovery before you choose Retry.

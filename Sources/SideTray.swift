@@ -177,6 +177,18 @@ final class Controller: NSObject, NSApplicationDelegate {
   #endif
   return recoveryWatcher?.isRunning == true
  }
+ #if SIDETRAY_UX_FIXTURE
+ var fixtureRecoveryEvent:((RecoveryDiagnostics.Event)->Void)?
+ #endif
+ private lazy var recoveryLog=RecoveryDiagnostics(directory:MenuSwitches.supportDirectory.appendingPathComponent("Diagnostics"))
+ func logRecovery(_ event:RecoveryDiagnostics.Event,token:Int?=nil,metrics:[RecoveryDiagnostics.Metric:Int]=[:]) {
+  #if SIDETRAY_UX_FIXTURE
+  fixtureRecoveryEvent?(event) // Presentation fixtures never write production diagnostics.
+  #else
+  var values=metrics; values[.deferrals]=wakeRecovery.deferrals
+  recoveryLog.record(event,attempt:wakeRecovery.attempts,token:token ?? wakeRecovery.diagnosticCycle,metrics:values)
+  #endif
+ }
  var menuManagementSupported:Bool {
   #if SIDETRAY_UX_FIXTURE
   if let major=fixtureOSMajor { return PlatformCompatibility.backend(for:major) != nil }
@@ -547,6 +559,8 @@ final class Controller: NSObject, NSApplicationDelegate {
      var restoreFailure:Error?
      do { try self.menuSwitches.restore() } catch { restoreFailure=error }
      DispatchQueue.main.async {
+      self.logRecovery(.preferenceWriteFailed,token:wakeToken ?? 0)
+      if restoreFailure != nil { self.logRecovery(.restorationFailed,token:wakeToken ?? 0) }
       self.menuDataReadable=false
       self.menuDataAccess=MenuDataAccess.failure(error)
       self.recoveryBlocked=true
@@ -575,11 +589,12 @@ final class Controller: NSObject, NSApplicationDelegate {
    if let token=wakeToken,!self.wakeRecovery.accepts(token) { completion(false); return }
    guard !self.suspended,AXIsProcessTrusted() else { completion(false); return }
    let slots=barSlots(); let present=Set(slots.map(\.bundle))
-   if shown.isSubset(of:present),hidden.isDisjoint(with:present) { completion(true); return }
+   if shown.isSubset(of:present),hidden.isDisjoint(with:present) { self.logRecovery(.visibilityVerified,token:wakeToken ?? 0,metrics:[.slots:slots.count]); completion(true); return }
    if Date()<deadline { DispatchQueue.main.asyncAfter(deadline:.now()+0.15,execute:poll); return }
    // A stale MenuBarAgent can acknowledge preference writes without applying
    // them. Refresh that exact system process once, only after observing a
    // mismatch, and never while dragging, opening a menu or tracking a popup.
+   self.logRecovery(.visibilityVerificationFailed,token:wakeToken ?? 0,metrics:[.slots:slots.count,.missingShown:shown.subtracting(present).count,.unexpectedVisible:hidden.intersection(present).count])
    let popupOpen=self.externalMenuOpen
    if !refreshed,!self.wakeRecovery.isActive,!self.openingMenu,self.activeMenuBundle == nil,!self.ordering.isMoving,
       NSEvent.pressedMouseButtons == 0,!popupOpen,present.contains(own),
@@ -598,6 +613,7 @@ final class Controller: NSObject, NSApplicationDelegate {
  func pauseAfterVisibilityFailure() {
   // Sleep and permission loss are handled by their own automatic recovery.
   guard !suspended,controlAccessGranted else { restoreVisibility(); return }
+  logRecovery(.paused)
   visibilityPaused=true // Set before restoration or queued transactions can run.
   restoreVisibility()
   visibilityMessage="SideTray paused after the menu bar did not update. Original icon settings are being restored. Choose Retry to try again."
@@ -801,6 +817,7 @@ final class Controller: NSObject, NSApplicationDelegate {
   }
  }
  @objc func recheckPermissions() {
+  logRecovery(.manualRetry)
   wakeRecovery.cancel()
   if setupPending { setupReadiness.cancel(); setupPermissionsWereReady=false; probeSetupPermissions(); return }
   #if SIDETRAY_UX_FIXTURE
@@ -941,16 +958,18 @@ final class Controller: NSObject, NSApplicationDelegate {
   else if !canManageVisibility || settings?.isVisible == true { checkMenuDataAccess() }
  }
  func handleSleep() {
+  logRecovery(.sleep)
   setupReadiness.cancel()
   suspended=true; wakeRecovery.cancel(); pendingTrayOpen=false; controlArrangementPending=false
   stopMenuWatch(); dismissTray(); activation.cancel(); ordering.cancel(); restoreVisibility()
  }
  func handleWake() {
-  guard suspended else { return } // Duplicate wake notifications do not reset the budget.
+  guard suspended else { logRecovery(.wakeIgnored); return } // Duplicate wake notifications do not reset the budget.
   suspended=false
   guard menuManagementSupported,!terminating,!setupPending,isInstalled else { return }
+  logRecovery(.wakeStarted)
   visibilityMessage="Waiting for the menu bar after wake…"
-  wakeRecovery.start(attempt:{ [weak self] token,done in
+  wakeRecovery.startEvaluating(attempt:{ [weak self] token,done in
    self?.attemptWakeRecovery(token:token,completion:done)
   },finished:{ [weak self] ok in
    guard let self else { return }
@@ -966,8 +985,11 @@ final class Controller: NSObject, NSApplicationDelegate {
     self.visibilityPaused=false; self.updatePermissionRecovery()
    } else {
     self.visibilityPaused=true
-    self.visibilityMessage="SideTray could not restore the layout after waking and has stopped retrying. Use Retry to try again."
+    self.visibilityMessage=self.wakeRecovery.readinessExpired
+     ? "The menu bar did not become ready after waking. SideTray has paused. Use Retry to try again."
+     : "SideTray could not restore the layout after waking and has stopped retrying. Use Retry to try again."
    }
+   self.logRecovery(ok ? .wakeSucceeded : .wakeExhausted)
    NSLog("SideTray wake recovery: %@ after %d attempts",ok ? "restored" : "stopped",self.wakeRecovery.attempts)
    self.refreshSettingsUI()
   })
@@ -981,23 +1003,43 @@ final class Controller: NSObject, NSApplicationDelegate {
    $0[kCGWindowLayer as String] as? Int == 101 && $0[kCGWindowOwnerPID as String] as? Int != Int(ProcessInfo.processInfo.processIdentifier)
   }
  }
- func attemptWakeRecovery(token:Int,completion:@escaping(Bool)->Void) {
-  guard wakeRecovery.accepts(token),!suspended,!terminating,!setupPending else { completion(false); return }
-  guard !openingMenu,!placementBusy,!ordering.isMoving,activeMenuBundle == nil,NSEvent.pressedMouseButtons == 0 else { completion(false); return }
+ func attemptWakeRecovery(token:Int,completion:@escaping(WakeRecovery.Result)->Void) {
+  logRecovery(.attemptStarted,token:token)
+  func blocked(_ event:RecoveryDiagnostics.Event) { logRecovery(event,token:token); completion(.deferred) }
+  guard wakeRecovery.accepts(token),!suspended,!terminating,!setupPending else { blocked(.cancelled); return }
+  guard !openingMenu else { blocked(.menuOpening); return }
+  guard !placementBusy else { blocked(.placementBusy); return }
+  guard !ordering.isMoving else { blocked(.orderingBusy); return }
+  guard activeMenuBundle == nil else { blocked(.activeMenu); return }
+  guard NSEvent.pressedMouseButtons == 0 else { blocked(.mouseDown); return }
   #if SIDETRAY_UX_FIXTURE
-  if let attempt=fixtureWakeAttempt { attempt(token,completion); return }
+  if let attempt=fixtureWakeAttempt { attempt(token) { completion($0 ? .succeeded : .failed) }; return }
   #endif
-  guard !checkingPermissions,!externalMenuOpen else { completion(false); return }
-  // A missing own button means the menu service is not ready for a write yet.
-  guard barSlots().contains(where:{ $0.bundle == Bundle.main.bundleIdentifier }) else { completion(false); return }
-  // Re-probe protected settings and restart a stopped recovery helper before
-  // applying anything. This does not request or reset OS permissions.
+  guard !checkingPermissions else { blocked(.checkingAccess); return }
+  guard !externalMenuOpen else { blocked(.externalPopup); return }
+  let slots=barSlots()
+  guard slots.contains(where:{ $0.bundle == Bundle.main.bundleIdentifier }) else {
+   logRecovery(.ownButtonMissing,token:token,metrics:[.slots:slots.count]); completion(.deferred); return
+  }
+  // Readiness skips consume the finite settling budget, not a layout attempt.
   checkMenuDataAccess(completion:{ [weak self] in
-   guard let self,self.wakeRecovery.accepts(token),!self.suspended,!self.terminating else { completion(false); return }
-   guard self.accessReady,!self.openingMenu,!self.placementBusy,!self.ordering.isMoving,
-         self.activeMenuBundle == nil,NSEvent.pressedMouseButtons == 0,!self.externalMenuOpen else { completion(false); return }
+   guard let self else { completion(.deferred); return }
+   guard self.wakeRecovery.accepts(token),!self.suspended,!self.terminating else { self.logRecovery(.cancelled,token:token); completion(.deferred); return }
+   guard self.accessReady else {
+    self.logRecovery(.accessNotReady,token:token,metrics:[.controlGranted:self.controlAccessGranted ? 1:0,.dataReadable:self.menuDataReadable ? 1:0,.startupRecovered:self.startupRecoveryComplete ? 1:0,.recoveryBlocked:self.recoveryBlocked ? 1:0,.helperRunning:self.recoveryHelperRunning ? 1:0]); completion(.deferred); return
+   }
+   guard !self.openingMenu else { blocked(.menuOpening); return }
+   guard !self.placementBusy else { blocked(.placementBusy); return }
+   guard !self.ordering.isMoving else { blocked(.orderingBusy); return }
+   guard self.activeMenuBundle == nil else { blocked(.activeMenu); return }
+   guard NSEvent.pressedMouseButtons == 0 else { blocked(.mouseDown); return }
+   guard !self.externalMenuOpen else { blocked(.externalPopup); return }
    self.visibilityPaused=false; self.permissionRecovery.retry()
-   self.applyVisibility(wakeToken:token,completion:completion)
+   self.logRecovery(.applyingLayout,token:token)
+   self.applyVisibility(wakeToken:token) { ok in
+    self.logRecovery(ok ? .layoutSucceeded : .layoutFailed,token:token)
+    completion(ok ? .succeeded : .failed)
+   }
   })
  }
  func installLifecycle() {

@@ -35,3 +35,6 @@ build/tests/wake-recovery
 xcrun swiftc -target arm64-apple-macos26.0 Sources/PlatformCompatibility.swift Tests/CompatibilityTests.swift -o build/tests/compatibility
 build/tests/compatibility
 python3 scripts/test-compatibility.py
+
+xcrun swiftc -target arm64-apple-macos26.0 Sources/RecoveryDiagnostics.swift Tests/RecoveryDiagnosticsTests.swift -o build/tests/recovery-diagnostics
+build/tests/recovery-diagnostics

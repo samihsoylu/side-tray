@@ -1,5 +1,13 @@
 # Beta status
 
+## 0.2.14 (build 19)
+
+- Wake readiness skips no longer spend the three real layout attempts. At most30 readiness deferrals are scheduled two seconds apart; genuine failures retain the2/5/15-second attempt schedule. Both budgets stop, preserving the anti-flicker pause. Readiness exhaustion has specific explanatory text.
+- Bounded, private local JSONL diagnostics distinguish readiness reasons, native verification counts, actual layout results and exhaustion. No automatic uploads or app/menu contents. See HELP.md.
+- Includes the compatibility groundwork from69ae1ab: unsupported-OS shell/update access, recovery provenance and historical appcast ranges. Menu management/distribution remain macOS27;26 runtime support is not claimed.
+
+Validation: twelve Swift suites, three feed tests and the isolated controller/Settings fixture cover long-busy recovery, mixed deferrals/failures, finite limits, stale callbacks, reason events, log rotation/privacy and write failures. Real sleep/wake reproduction remains daily-use testing; the exact earlier blocker was not recorded by0.2.13. Installed0.2.13 is preserved; the user updates manually. Release publication checks are recorded after completion.
+
 ## 0.2.10 (build 15)
 
 - Uses a durable self-signed certificate so subsequent releases retain the same app identity. Migration from 0.2.9 or earlier may need one final permission refresh; saved app choices and the first-open Gatekeeper flow are unchanged.

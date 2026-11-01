@@ -1,0 +1,4 @@
+- Fix wake recovery exhausting its layout attempts while menus are open or macOS is still preparing the menu bar. Readiness checks now have a separate, bounded waiting period.
+- Keep the three-attempt limit for actual layout failures and the safeguard against repeated menu-bar flashing.
+- Add bounded local recovery logs identifying skipped checks, layout results and verification failures without recording app names or menu contents.
+- Add compatibility guards and preserve older releases in the update feed. Menu management remains supported on macOS 27 only; macOS 26 testing is still pending.

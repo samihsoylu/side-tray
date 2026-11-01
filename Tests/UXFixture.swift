@@ -153,6 +153,18 @@ final class UXFixture:NSObject {
   owner.applyVisibility(wakeToken:heldWakeToken!) { staleResult=$0 }
   owner.handleSleep(); releasePipeline?(); heldWakeCompletion?(true)
   try check(staleResult == false && !owner.wakeRecovery.isActive && owner.suspended,"Queued work and completions from the previous wake must be ignored")
+  var recoveryEvents=[RecoveryDiagnostics.Event]()
+  owner.fixtureRecoveryEvent={ recoveryEvents.append($0) }
+  owner.wakeRecovery=WakeRecovery(maxDeferrals:5,schedule:{ delay,work in wakeTasks.append(work) })
+  owner.suspended=true; owner.openingMenu=true
+  owner.handleWake()
+  for _ in 0..<4 { wakeTasks.removeFirst()() }
+  try check(owner.wakeRecovery.attempts == 0 && owner.wakeRecovery.deferrals == 4 && owner.wakeRecovery.isActive,"An open menu must not consume the real layout budget")
+  try check(recoveryEvents.filter { $0 == .menuOpening }.count == 4,"Each readiness skip records its reason")
+  owner.openingMenu=false; owner.fixtureWakeAttempt={ _,done in done(true) }
+  wakeTasks.removeFirst()()
+  try check(owner.wakeRecovery.state == .succeeded && recoveryEvents.contains(.wakeSucceeded),"Recovery succeeds after the user closes the menu")
+  owner.fixtureRecoveryEvent=nil
   owner.fixtureWakeAttempt=nil; owner.fixtureRestoreVisibility=nil
   owner.wakeRecovery=WakeRecovery(); owner.visibilityPaused=false; owner.suspended=false; owner.menuDataReadable=false
   print("PASS: controller wake delay, blocked competing updates, bounded failure, next-cycle recovery, sleep/manual cancellation and recovery UI")
