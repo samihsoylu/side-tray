@@ -131,7 +131,7 @@ final class MenuSwitches {
   journal=journalURL ?? Self.supportDirectory.appendingPathComponent("menu-visibility.json")
   self.osMajor=osMajor; readOverride=readDomain; writeOverride=writeDomain
  }
- static func supports(major:Int) -> Bool { PlatformCompatibility.backend(for:major) == .controlCenter27 }
+ static func supports(major:Int) -> Bool { PlatformCompatibility.backend(for:major) != nil }
  private func checkCompatibility() throws {
   guard Self.supports(major:osMajor) else { throw MenuSwitchError.unsupportedSystem }
  }
@@ -218,7 +218,10 @@ final class MenuSwitches {
  }
  private func loadJournal() throws -> Journal {
   try checkCompatibility()
-  if !FileManager.default.fileExists(atPath:journal.path) { return Journal() }
+  if !FileManager.default.fileExists(atPath:journal.path) {
+   var record=Journal(); record.backend=PlatformCompatibility.backend(for:osMajor)?.rawValue; record.osMajor=osMajor
+   return record
+  }
   do {
    let data=try Data(contentsOf:journal)
    guard data.count<=1024*1024 else { throw MenuSwitchError.invalidJournal }
@@ -232,7 +235,7 @@ final class MenuSwitches {
    } else {
     // Legacy records were only written by the macOS 27 backend. Upgrade on the
     // next save, never infer compatibility with a different OS or schema.
-    guard record.backend == nil,record.osMajor == nil,record.schema == nil else { throw MenuSwitchError.incompatibleJournal }
+    guard osMajor == 27,record.backend == nil,record.osMajor == nil,record.schema == nil else { throw MenuSwitchError.incompatibleJournal }
     record.version=2; record.backend=PlatformCompatibility.Backend.controlCenter27.rawValue
     record.osMajor=osMajor; record.schema=PlatformCompatibility.journalSchema
    }

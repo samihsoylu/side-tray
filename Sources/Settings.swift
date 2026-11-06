@@ -258,7 +258,7 @@ final class SettingsUI:NSObject {
   if owner.menuDataAccess == .unavailable {
    dataHelp.stringValue="Menu bar settings could not be read. This can be a temporary error or an unsupported macOS format; it does not establish that permission is missing. Choose Retry."
   } else if owner.menuDataAccess == .checking { dataHelp.stringValue="Checking access to macOS menu bar settings." }
-  else if owner.menuDataAccess == .unsupported { dataHelp.stringValue="This build supports macOS 27. SideTray will not change menu bar settings on another major version. Install a compatible SideTray update." }
+  else if owner.menuDataAccess == .unsupported { dataHelp.stringValue="This build enables macOS 26 and 27. SideTray will not change menu bar settings on another major version. Install a compatible SideTray update." }
   if dataReady && granted && !owner.recoveryHelperRunning && (!owner.setupPending || owner.setupReadiness.state == .exhausted) { dataHelp.stringValue="Access is granted. The recovery helper is not running; choose Retry." }
   accessHelp.isHidden = !needsPermission
   accessHelp.stringValue=owner.setupPending

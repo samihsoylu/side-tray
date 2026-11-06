@@ -25,8 +25,9 @@ class CompatibilityTests(unittest.TestCase):
     def test_policy(self):
         policy = json.loads(Path('Compatibility.json').read_text())
         self.assertEqual(policy['validatedMenuMajors'], [27])
+        self.assertEqual(policy['enabledMenuMajors'], [26,27])
         self.assertLessEqual(tuple(map(int, policy['deploymentTarget'].split('.'))), tuple(map(int, policy['distributionMinimum'].split('.'))))
-        self.assertEqual((policy['distributionMinimum'], policy['distributionMaximum']), ('27.0', '27.999'))
+        self.assertEqual((policy['distributionMinimum'], policy['distributionMaximum']), ('26.0', '27.999'))
 
     def test_retains_old_ranges_and_signatures(self):
         with tempfile.TemporaryDirectory() as directory:

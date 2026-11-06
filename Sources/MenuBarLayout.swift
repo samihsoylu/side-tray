@@ -9,7 +9,9 @@ struct BarSlot {
 }
 
 func barSlots() -> [BarSlot] {
- guard PlatformCompatibility.currentBackend == .controlCenter27,AXIsProcessTrusted(),let agent=NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.MenuBarAgent").first else { return [] }
+ guard AXIsProcessTrusted() else { return [] }
+ if PlatformCompatibility.currentBackend == .controlCenter26 { return legacyBarSlots() }
+ guard PlatformCompatibility.currentBackend == .controlCenter27,let agent=NSRunningApplication.runningApplications(withBundleIdentifier:"com.apple.MenuBarAgent").first else { return [] }
  let root=AXUIElementCreateApplication(agent.processIdentifier)
  AXUIElementSetMessagingTimeout(root,0.1)
  var slots=[BarSlot]()
@@ -28,6 +30,37 @@ func barSlots() -> [BarSlot] {
   }
  }
  return slots
+}
+
+/// Tahoe exposes status items through each app's extras menu bar rather
+/// than the consolidated MenuBarAgent hierarchy. Keep these paths separate.
+private func legacyBarSlots() -> [BarSlot] {
+ var result=[BarSlot]()
+ for app in NSWorkspace.shared.runningApplications {
+  guard let bundle=app.bundleIdentifier else { continue }
+  let root=AXUIElementCreateApplication(app.processIdentifier)
+  AXUIElementSetMessagingTimeout(root,0.1)
+  guard let extras=attribute(root,kAXExtrasMenuBarAttribute),CFGetTypeID(extras) == AXUIElementGetTypeID() else { continue }
+  for child in children(extras as! AXUIElement) {
+   let role=attribute(child,kAXRoleAttribute) as? String
+   guard role == kAXMenuBarItemRole || role == kAXButtonRole,
+         let frame=legacyStatusFrame(child),frame.width>0,frame.height>0 else { continue }
+   var pid:pid_t=0; AXUIElementGetPid(child,&pid)
+   guard pid == app.processIdentifier else { continue }
+   // Hidden/offscreen AX placeholders must not be counted as visible icons.
+   guard verifiedStatusPoint(frame:frame,pid:pid) != nil else { continue }
+   result.append(BarSlot(bundle:bundle,pid:pid,frame:frame,element:child))
+  }
+ }
+ return result
+}
+private func legacyStatusFrame(_ element:AXUIElement) -> CGRect? {
+ if let frame=rectAttribute(element) { return frame }
+ guard let position=attribute(element,kAXPositionAttribute),CFGetTypeID(position) == AXValueGetTypeID(),
+       let size=attribute(element,kAXSizeAttribute),CFGetTypeID(size) == AXValueGetTypeID() else { return nil }
+ var point=CGPoint.zero,dimensions=CGSize.zero
+ guard AXValueGetValue(position as! AXValue,.cgPoint,&point),AXValueGetValue(size as! AXValue,.cgSize,&dimensions) else { return nil }
+ return CGRect(origin:point,size:dimensions)
 }
 
 /// Reorders only SideTray's separator. Important app icons retain their order.

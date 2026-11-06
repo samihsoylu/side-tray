@@ -346,7 +346,16 @@ final class UXFixture:NSObject {
   try check(visibleText().contains("Missing from the list? Drag the highlighted icon"))
   owner.setupPending=false; owner.menuDataAccess = .unsupported; owner.refreshSettingsUI()
   try check(visibleText().contains("macOS not supported"))
-  for major in [26,28] {
+  owner.fixtureOSMajor=26; owner.fixtureInstalled=true; owner.fixtureControlAccess=false; owner.setupPending=true
+  owner.menuDataReadable=false; owner.menuDataAccess = .permissionRequired
+  owner.showSettings(destination:"permissions")
+  try check(owner.menuManagementSupported && owner.settings!.title == "Set Up SideTray","26 may enter setup")
+  try check(visibleButtons().contains("Request Access…"),"26 exposes the normal permission route")
+  owner.fixtureControlAccess=true; owner.fixtureHelperRunning=true
+  owner.menuDataReadable=true; owner.menuDataAccess = .available; owner.startupRecoveryComplete=true; owner.recoveryBlocked=false
+  owner.refreshSettingsUI()
+  try check(owner.accessReady,"26 with valid access is no longer blocked by its major version")
+  for major in [25,28] {
    owner.fixtureOSMajor=major; owner.fixtureControlAccess=false; owner.setupPending=true
    var openedPane=false,restored=false
    owner.fixtureOpenSettings={ _ in openedPane=true }; owner.fixtureRestoreVisibility={ restored=true }

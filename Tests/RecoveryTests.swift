@@ -67,7 +67,7 @@ final class FakeDomain {
   let metadata=try JSONSerialization.jsonObject(with:recorded) as! [String:Any]
   try check(metadata["version"] as? Int == 2 && metadata["osMajor"] as? Int == 27,"Recovery records identify their OS")
   try check(metadata["backend"] as? String == "controlcenter27-v1" && metadata["schema"] as? String == PlatformCompatibility.journalSchema,"Recovery records identify backend and schema")
-  for major in [26,28] {
+  for major in [25,28] {
    let foreign=store(fake,"normal",major:major), reads=fake.reads, writes=fake.writes
    try rejects { try foreign.restore() }; try rejects { try foreign.apply(["app.a":false]) }
    try check(fake.reads == reads && fake.writes == writes,"Unknown OS must not access native settings")
@@ -92,6 +92,21 @@ final class FakeDomain {
   let oldWrites=fake.writes
   try rejects { try unsupported.apply(["app.a":false]) }
   try check(fake.writes == oldWrites,"No unsupported OS writes")
+
+  let tahoeDomain=try FakeDomain(["app.a":true]), tahoe=store(tahoeDomain,"tahoe",major:26)
+  try check(tahoe.accessStatus() == .available,"26 can proceed past the version gate with a valid schema")
+  try tahoe.apply(["app.a":false])
+  let tahoeURL=root.appendingPathComponent("tahoe/menu-visibility.json")
+  let tahoeBytes=try Data(contentsOf:tahoeURL)
+  let tahoeMetadata=try JSONSerialization.jsonObject(with:tahoeBytes) as! [String:Any]
+  try check(tahoeMetadata["osMajor"] as? Int == 26 && tahoeMetadata["backend"] as? String == "controlcenter26-v1","26 records retain their own provenance")
+  let on27=store(tahoeDomain,"tahoe",major:27), beforeForeign=tahoeDomain.writes
+  try rejects { try on27.restore() }
+  try check(tahoeDomain.writes == beforeForeign && (try Data(contentsOf:tahoeURL)) == tahoeBytes,"27 cannot overwrite a 26 record")
+  try tahoe.restore(); try check(try tahoeDomain.states()["app.a"] == true,"26 restores original flags")
+  try Data("{\"original\":{\"app.a\":true},\"written\":{\"app.a\":false}}".utf8).write(to:tahoeURL)
+  try rejects { try tahoe.restore() }
+  try check(tahoe.hasRecoveryRecord,"26 cannot interpret an unversioned 27 record")
 
   let helperDomain=try FakeDomain(["app.parent":true,"unrelated":true])
   let helperStore=store(helperDomain,"helper")

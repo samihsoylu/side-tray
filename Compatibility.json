@@ -1,6 +1,12 @@
 {
   "deploymentTarget": "26.0",
-  "distributionMinimum": "27.0",
+  "distributionMinimum": "26.0",
   "distributionMaximum": "27.999",
-  "validatedMenuMajors": [27]
+  "validatedMenuMajors": [
+    27
+  ],
+  "enabledMenuMajors": [
+    26,
+    27
+  ]
 }
