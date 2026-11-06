@@ -2,7 +2,7 @@
 
 Menu management is now **enabled on macOS 26 and 27** at the user's request. macOS 26 is experimental: the version gate is removed, with a separate per-app `AXExtrasMenuBar` discovery path and independent recovery-record identity. The protected visibility codec still requires the observed `trackedApplications`/`isAllowed` schema. If macOS 26 uses a different format, setup cannot finish until that storage backend is implemented. No live macOS 26.6.2 test has been performed; lifting the gate is not a runtime compatibility claim.
 
-`Compatibility.json` distinguishes enabled versions `[26,27]` from runtime-validated versions `[27]`. Future candidate feeds permit 26.0–27.999; the currently published 0.2.14 feed remains unchanged.
+`Compatibility.json` distinguishes enabled versions `[26,27]` from runtime-validated versions `[27]`. Release 0.2.15 permits 26.0–27.999 in the update feed. Earlier feed entries retain their original OS bounds.
 
 `Compatibility.json` controls the binary deployment target and new release feed bounds. `PlatformCompatibility` selects the implemented backend; the tests require its allowlist to match the manifest’s enabled list. A new backend must supply discovery, visibility changes, real-menu activation and restoration together, with its own permission requirements. Parsing a preference file is not sufficient evidence of support.
 
