@@ -1,3 +1,3 @@
-- Enable experimental macOS 26 setup and add discovery through each app’s menu-bar accessibility elements.
-- Keep macOS 26 and 27 recovery records separate while preserving existing macOS 27 behavior.
-- Allow macOS 26 to receive compatible updates. macOS 26.6.2 operation has not yet been verified on a real Mac; visibility management still requires the expected macOS settings format.
+- Add macOS 26 support with per-app menu bar discovery. Confirmed working on macOS 26.6.2 in UTM.
+- Keep macOS 26 and 27 recovery records separate.
+- Allow macOS 26 to receive compatible updates.

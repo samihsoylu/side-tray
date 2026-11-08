@@ -16,7 +16,7 @@
   <a href="https://github.com/samihsoylu/side-tray/issues">Report an issue</a>
 </p>
 
-<p align="center">macOS 26–27 · Apple Silicon and Intel · macOS 26 is experimental</p>
+<p align="center">macOS 26–27 · Apple Silicon and Intel</p>
 
 ## Get started
 
@@ -38,7 +38,7 @@ Versions before 0.2.6 need one manual DMG installation; later versions update th
 
 macOS may require **Open Anyway** in Privacy & Security on first launch, or renewed permissions after an update. [Permission help](docs/HELP.md)
 
-SideTray uses internal macOS settings and should not run alongside another menu bar manager. Testing on other Macs is ongoing. [Beta status](docs/STATUS.md)
+SideTray uses internal macOS settings and should not run alongside another menu bar manager. SideTray 0.2.15 was tested on macOS 26.6.2 in UTM. [Beta status](docs/STATUS.md)
 
 ## Source
 

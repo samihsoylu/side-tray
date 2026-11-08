@@ -2,8 +2,8 @@
 
 ## 0.2.15 (build 20)
 
-- Enables experimental macOS 26 setup with a separate per-app accessibility discovery path and recovery identity. Runtime-validated versions remain `[27]`; macOS 26.6.2 is being tested by the user.
-- Automated tests cover the 26 version gate, synthetic settings apply/restore, cross-version journal rejection and simulated setup controls. No real macOS 26 permission/visibility/menu journey has been verified. The existing protected settings schema must be present for setup to complete.
+- Enables macOS 26 setup with a separate per-app accessibility discovery path and recovery identity. The user confirmed SideTray 0.2.15 works on macOS 26.6.2 in UTM.
+- Automated tests cover the 26 version gate, synthetic settings apply/restore, cross-version journal rejection and simulated setup controls. The existing protected settings schema must be present for setup to complete.
 - The universal DMG uses the existing pinned signing certificate. Release/feed eligibility is 26.0–27.999; older release ranges remain intact. See [release notes](RELEASE-0.2.15.md).
 
 ## 0.2.14 (build 19)

@@ -1,6 +1,6 @@
 # macOS compatibility
 
-Menu management is now **enabled on macOS 26 and 27** at the user's request. macOS 26 is experimental: the version gate is removed, with a separate per-app `AXExtrasMenuBar` discovery path and independent recovery-record identity. The protected visibility codec still requires the observed `trackedApplications`/`isAllowed` schema. If macOS 26 uses a different format, setup cannot finish until that storage backend is implemented. No live macOS 26.6.2 test has been performed; lifting the gate is not a runtime compatibility claim.
+SideTray 0.2.15 supports menu management on macOS 26 and 27. The user confirmed it works on macOS 26.6.2 in UTM. The macOS 26 backend discovers items through each app’s `AXExtrasMenuBar` and uses a separate recovery identity. The protected visibility codec requires the `trackedApplications` and `isAllowed` settings schema.
 
 `Compatibility.json` distinguishes enabled versions `[26,27]` from runtime-validated versions `[27]`. Release 0.2.15 permits 26.0–27.999 in the update feed. Earlier feed entries retain their original OS bounds.
 
@@ -42,7 +42,7 @@ Use a disposable account or test Mac running 26. Do not grant the production app
 6. Test the macOS 26 candidate using the strict existing visibility codec. If its format is absent/different, record the failure and implement the correct storage/visibility strategy. Do not weaken the parser merely to complete setup.
 7. Remove the temporary probe's grant and app after testing. Keep only the reviewed local evidence needed for the decision.
 
-## Runtime acceptance before enabling macOS 26
+## Extended macOS 26 runtime checks
 
 | Check | Required evidence | Current state |
 | --- | --- | --- |

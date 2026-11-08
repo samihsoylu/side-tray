@@ -25,7 +25,7 @@ The previous ad-hoc identity cannot be preserved by this new certificate. Users 
 
 The packaging scripts reject an app whose bundled GPL or Sparkle license is missing or differs from the repository. Builds copy `LICENSE` to `SideTray.app/Contents/Resources/LICENSE.txt` before code signing. The older local beta ZIP helper is retained for historical workflows; public releases use only the DMG.
 
-The update script checks bundle identity, architectures and updater security settings, packages the app as `SideTray.app`, signs the archive and feed, applies the new release’s OS bounds from `Compatibility.json` (currently macOS 26–27, with 26 experimental), retains earlier feed items and their bounds, and verifies the feed. The binary deployment minimum can be lower than the supported menu-management range so Settings and compatible updates remain reachable. See [macOS compatibility](MACOS-COMPATIBILITY.md) before changing either range. It performs no upload. Do not edit a signed feed without signing it again.
+The update script checks bundle identity, architectures and updater security settings, packages the app as `SideTray.app`, signs the archive and feed, applies the new release’s OS bounds from `Compatibility.json` (currently macOS 26–27), retains earlier feed items and their bounds, and verifies the feed. The binary deployment minimum can be lower than the supported menu-management range so Settings and compatible updates remain reachable. See [macOS compatibility](MACOS-COMPATIBILITY.md) before changing either range. It performs no upload. Do not edit a signed feed without signing it again.
 
 Release notes should use concise bullet points for changes and any required installation steps.
 
